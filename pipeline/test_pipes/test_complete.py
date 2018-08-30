@@ -1,0 +1,68 @@
+import unittest
+from pipeline import pipe, types
+
+import numpy as np
+
+
+class Pipe(pipe.BasePipe):
+    # variables required by fit (supervised learning)
+    fit_placeholders = {
+        # (arbitrary items, arbitrary features)
+        'x': types.Array(float, shape=(None, None)),
+        'y': types.List(float)
+    }
+
+    placeholders = {
+        'x': types.List(float)
+    }
+
+    # parameter passed to fit()
+    fit_parameters = {
+        'alpha': float
+    }
+
+    # parameter assigned in fit()
+    fitted_parameters = {
+        'model_': object
+    }
+
+    # type and key of transform
+    result = {
+        'model': object
+    }
+
+    def fit(self, data, parameters=None):
+        import sklearn.linear_model
+        self['model'] = sklearn.linear_model.Lasso(parameters['alpha'])
+
+        self['model'].fit(data['x'], data['y'])
+
+    def transform(self, data):
+        data['model'] = self['model']
+        return data
+
+
+class TestPipe(unittest.TestCase):
+
+    def test_basic(self):
+        p = Pipe()
+
+        p.fit({'x': [[1.0], [2.0]], 'y': [1.0, 1.0]}, {'alpha': 0.1})
+        data = p.transform({'df1': [[1.0], [2.0]]})
+
+        self.assertEqual(data['model'].__class__.__name__, 'Lasso')
+
+        errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'z': [1.0, 1.0]}, {'alpha': 0.1})
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(type(errors[0]), pipe.WrongData)
+
+        errors = p.check_fit({'x': 1, 'y': []}, {'alpha': 0.1})
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(type(errors[0]), pipe.WrongDataType)
+
+        errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'y': [1.0, 1.0]}, {'alph': 0.1})
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(type(errors[0]), pipe.WrongParameter)
+
+        errors = p.check_transform({'df1': []})
+        self.assertEqual(len(errors), 0)
