@@ -2,21 +2,10 @@ import collections
 import logging
 
 import pipeline.types
+import pipeline.exceptions as _exceptions
 
 
 logger = logging.getLogger(__name__)
-
-
-class WrongData(Exception):
-    pass
-
-
-class WrongParameter(Exception):
-    pass
-
-
-class WrongDataType(WrongData):
-    pass
 
 
 class Column:
@@ -30,7 +19,7 @@ class Column:
         return self._type
 
     def is_valid_type(self, instance):
-        return self.type.is_valid_type(instance)
+        return self.type.check_schema(instance)
 
 
 class Parameter(Column):
@@ -93,35 +82,33 @@ class BasePipe:
         required_keys = set(self.fit_placeholders.keys())
         if len(required_keys - data_keys):
             exceptions.append(
-                WrongData('Missing arguments in fit:'
-                          '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
+                _exceptions.WrongData('Missing arguments in fit:'
+                                      '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
             )
 
         for key in self.fit_placeholders:
             expected_type = self._get_type(self.fit_placeholders[key])
-            if key in data and not expected_type.is_valid_type(data[key]):
-                exceptions.append(
-                    WrongDataType('Wrong type of argument \'%s\' in fit:'
-                                  '\nExpected type: %s\nPassed type:   %s' % (
-                        key, expected_type, type(data[key])))
-                )
+            if key in data:
+                new_exceptions = expected_type.check_schema(data[key])
+                for exception in new_exceptions:
+                    exception.location = 'argument \'%s\' in fit' % key
+                exceptions += new_exceptions
 
         keys1 = set(parameters.keys())
         keys2 = set(self.fit_parameters.keys())
         if keys1 != keys2:
             exceptions.append(
-                WrongParameter('Unexpected or missing parameter in fit:'
-                               '\nExpected parameter: %s\nPassed parameter:   %s' % (keys2, keys1))
+                _exceptions.WrongParameter('Unexpected or missing parameter in fit:'
+                                           '\nExpected parameter: %s\nPassed parameter:   %s' % (keys2, keys1))
             )
 
         for key in self.fit_parameters:
             expected_type = self._get_type(self.fit_parameters[key])
-            if key in parameters and not expected_type.is_valid_type(parameters[key]):
-                exceptions.append(
-                    WrongDataType('Unexpected type of parameter \'%s\' in fit:'
-                                  '\nExpected type: %s\nPassed type:   %s' % (
-                        key, expected_type, type(parameters[key])))
-                )
+            if key in parameters:
+                new_exceptions = expected_type.check_schema(parameters[key])
+                for exception in new_exceptions:
+                    exception.location = 'parameter \'%s\' in fit' % key
+                exceptions += new_exceptions
 
         return exceptions
 
@@ -132,17 +119,16 @@ class BasePipe:
         required_keys = set(self.placeholders.keys())
         if len(required_keys - data_keys):
             exceptions.append(
-                WrongData('Missing arguments in transform:'
-                          '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
+                _exceptions.WrongData('Missing arguments in transform:'
+                                      '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
             )
 
         for key in self.placeholders:
-            if key in data and not self.placeholders[key].is_valid_type(data[key]):
-                exceptions.append(
-                    WrongDataType('Unexpected type of argument \'%s\' in transform:'
-                                  '\nExpected type: %s\nPassed type:   %s' % (
-                                      key, self.placeholders[key].type, type(data[key])))
-                )
+            expected_type = self._get_type(self.placeholders[key])
+            if key in data:
+                new_exceptions = expected_type.check_schema(data[key])
+                for exception in new_exceptions:
+                    exception.location = 'argument \'%s\' in transform' % key
         return exceptions
 
     def apply_transform_schema(self, data):

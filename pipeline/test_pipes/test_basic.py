@@ -1,6 +1,6 @@
 import unittest
 
-from pipeline import pipe, types
+from pipeline import pipe, types, exceptions
 
 
 class Pipe(pipe.BasePipe):
@@ -58,17 +58,26 @@ class TestPipe(unittest.TestCase):
         self.assertEqual(p.transform({'x': [1.0, 2.0]}),
                          {'x': [1.0, 2.0], 'output': [1.0, 1.0, 0.1]})
 
+    def test_check_fit(self):
+        p = Pipe()
+
         errors = p.check_fit({'x': [], 'z': []}, {'alpha': 0.1})
         self.assertEqual(len(errors), 1)
-        self.assertEqual(type(errors[0]), pipe.WrongData)
+        self.assertEqual(type(errors[0]), exceptions.WrongData)
 
         errors = p.check_fit({'x': 1, 'y': []}, {'alpha': 0.1})
         self.assertEqual(len(errors), 1)
-        self.assertEqual(type(errors[0]), pipe.WrongDataType)
+        self.assertEqual(type(errors[0]), exceptions.WrongType)
 
         errors = p.check_fit({'x': [], 'y': []}, {'alph': 0.1})
         self.assertEqual(len(errors), 1)
-        self.assertEqual(type(errors[0]), pipe.WrongParameter)
+        self.assertEqual(type(errors[0]), exceptions.WrongParameter)
+
+    def test_check_transform(self):
+        p = Pipe()
 
         errors = p.check_transform({'x': []})
         self.assertEqual(len(errors), 0)
+
+        errors = p.check_transform({'x1': []})
+        self.assertEqual(len(errors), 1)
