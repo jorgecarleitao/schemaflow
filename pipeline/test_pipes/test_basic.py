@@ -70,5 +70,5 @@ class TestPipe(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(type(errors[0]), pipe.WrongParameter)
 
-        errors = p.check_transform({'df1': []})
+        errors = p.check_transform({'x': []})
         self.assertEqual(len(errors), 0)

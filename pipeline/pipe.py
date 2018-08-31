@@ -53,17 +53,40 @@ class FitPlaceholder(Column):
     pass
 
 
+class BasePipe:
+    requirements = {}
 
-class Meta:
-    def __init__(self, placeholders, output, fit_placeholders, parameters, fitted_parameters, requirements):
-        self.placeholders = placeholders
-        self.output = output
-        self.fit_placeholders = fit_placeholders
-        self.parameters = parameters
-        self.fitted_parameters = fitted_parameters
-        self.requirements = requirements
+    # data required in fit
+    fit_placeholders = {}
 
-    def check_fit_arguments(self, data, parameters):
+    # data used in transform
+    placeholders = {}
+
+    # parameter passed to fit()
+    fit_parameters = {}
+
+    # parameter assigned in fit()
+    fitted_parameters = {}
+
+    # type and key of transform
+    result = {}
+
+    def __init__(self):
+        self.states = {}
+
+    def __setitem__(self, key, value):
+        self.states.__setitem__(key, value)
+
+    def __getitem__(self, key):
+        return self.states.__getitem__(key)
+
+    @staticmethod
+    def _get_type(type):
+        if not isinstance(type, pipeline.types.Type):
+            type = pipeline.types.LiteralType(type)
+        return type
+
+    def check_fit(self, data, parameters):
         exceptions = []
 
         data_keys = set(data.keys())
@@ -75,31 +98,34 @@ class Meta:
             )
 
         for key in self.fit_placeholders:
-            if key in data and not self.fit_placeholders[key].is_valid_type(data[key]):
+            expected_type = self._get_type(self.fit_placeholders[key])
+            if key in data and not expected_type.is_valid_type(data[key]):
                 exceptions.append(
                     WrongDataType('Wrong type of argument \'%s\' in fit:'
                                   '\nExpected type: %s\nPassed type:   %s' % (
-                        key, self.fit_placeholders[key].type, type(data[key])))
+                        key, expected_type, type(data[key])))
                 )
 
         keys1 = set(parameters.keys())
-        keys2 = set(self.parameters.keys())
+        keys2 = set(self.fit_parameters.keys())
         if keys1 != keys2:
             exceptions.append(
                 WrongParameter('Unexpected or missing parameter in fit:'
                                '\nExpected parameter: %s\nPassed parameter:   %s' % (keys2, keys1))
             )
-        for key in self.parameters:
-            if key in parameters and not self.parameters[key].is_valid_type(parameters[key]):
+
+        for key in self.fit_parameters:
+            expected_type = self._get_type(self.fit_parameters[key])
+            if key in parameters and not expected_type.is_valid_type(parameters[key]):
                 exceptions.append(
                     WrongDataType('Unexpected type of parameter \'%s\' in fit:'
                                   '\nExpected type: %s\nPassed type:   %s' % (
-                        key, self.parameters[key].type, type(parameters[key])))
+                        key, expected_type, type(parameters[key])))
                 )
 
         return exceptions
 
-    def check_transform_arguments(self, data):
+    def check_transform(self, data):
         exceptions = []
 
         data_keys = set(data.keys())
@@ -119,50 +145,10 @@ class Meta:
                 )
         return exceptions
 
-
-class MetaPipe(type):
-    def __new__(mcs, name, bases, attrs):
-        parameters = {}
-        fit_placeholders = {}
-        fitted_parameters = {}
-        placeholders = {}
-        output = {}
-        requirements = set()
-
-        for attr_name, attr_value in attrs.items():
-            if isinstance(attr_value, FitPlaceholder):
-                fit_placeholders[attr_name] = attr_value
-            elif isinstance(attr_value, FittedParameter):
-                fitted_parameters[attr_name] = attr_value
-            elif isinstance(attr_value, Parameter):
-                parameters[attr_name] = attr_value
-            elif isinstance(attr_value, Placeholder):
-                placeholders[attr_name] = attr_value
-            elif isinstance(attr_value, Output):
-                output[attr_name] = attr_value
-            elif attr_name == 'requirements':
-                requirements = attr_value
-
-        attrs.update({'_meta': Meta(placeholders, output, fit_placeholders,
-                                    parameters, fitted_parameters, requirements)})
-        return super(MetaPipe, mcs).__new__(mcs, name, bases, attrs)
-
-
-class BasePipe(metaclass=MetaPipe):
-    requirements = {}
-
-    def check_transform(self, data):
-        return self._meta.check_transform_arguments(data)
-
     def apply_transform_schema(self, data):
-        for key, value in self._meta.output.items():
+        for key, value in self.result.items():
             data[key] = value.type
         return data
-
-    def check_fit(self, data, parameters=None):
-        if parameters is None:
-            parameters = {}
-        return self._meta.check_fit_arguments(data, parameters)
 
     def fit(self, data, parameters=None):
         raise NotImplementedError
