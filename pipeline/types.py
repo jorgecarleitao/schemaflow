@@ -28,18 +28,46 @@ class LiteralType(Type):
         return []
 
 
-class SparkDataFrame(Type):
-    def check_schema(self, instance):
-        import pyspark.sql
-        return isinstance(instance, pyspark.sql.DataFrame)
-
-
-class PandasDataFrame(Type):
+class _DataFrame(Type):
     def __init__(self, schema: dict):
         self._schema = schema.copy()
         for column, base_type in self._schema.items():
             if not isinstance(base_type, Type):
                 self._schema[column] = LiteralType(base_type)
+
+
+class PySparkDataFrame(_DataFrame):
+
+    @staticmethod
+    def _dtype_to_type(dtype):
+        import pyspark.sql.types as types
+        import numpy
+        return {
+            types.LongType: int,
+            types.DoubleType: float,
+            types.StringType: numpy.dtype('O')}[type(dtype)]
+
+    def check_schema(self, instance):
+        import pyspark.sql
+        if not isinstance(instance, pyspark.sql.DataFrame):
+            return [_exceptions.WrongType(pyspark.sql.DataFrame, type(instance))]
+
+        exceptions = []
+        schema = dict((f.name, f.dataType) for f in instance.schema.fields)
+
+        for column in self._schema:
+            if column not in schema:
+                exceptions.append(_exceptions.WrongSchema(column, set(schema.keys())))
+            else:
+                column_type = self._dtype_to_type(schema[column])
+                expected_type = self._schema[column].type
+                if expected_type != column_type:
+                    exceptions.append(_exceptions.WrongType(expected_type, column_type))
+
+        return exceptions
+
+
+class PandasDataFrame(_DataFrame):
 
     def check_schema(self, instance):
         import pandas
@@ -50,7 +78,7 @@ class PandasDataFrame(Type):
         columns = set(instance.columns)
         for column in self._schema:
             if column not in columns:
-                exceptions.append(_exceptions.WrongData(column, columns))
+                exceptions.append(_exceptions.WrongSchema(column, columns))
             elif not pandas.np.issubdtype(instance.dtypes[column], self._schema[column].type):
                 exceptions.append(_exceptions.WrongType(self._schema[column].type, instance.dtypes[column]))
 
