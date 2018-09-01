@@ -10,6 +10,13 @@ class WrongParameter(PipelineError):
     pass
 
 
+class WrongSchema(PipelineError):
+    def __init__(self, expected_column, columns, location: str=''):
+        self.expected_column = expected_column
+        self.columns = columns
+        self.location = location
+
+
 class WrongType(PipelineError):
     def __init__(self, expected_type: type, base_type: type, location: str=''):
         self.expected_type = expected_type

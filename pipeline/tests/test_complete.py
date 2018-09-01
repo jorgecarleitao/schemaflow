@@ -1,7 +1,8 @@
 import unittest
-from pipeline import pipe, types, exceptions
 
 import numpy as np
+
+from pipeline import pipe, types, exceptions
 
 
 class Pipe(pipe.BasePipe):

@@ -12,7 +12,7 @@ class Type:
 
 class LiteralType(Type):
     def __init__(self, base_type):
-        assert isinstance(base_type, type)
+        assert not isinstance(base_type, Type)
         self._base_type = base_type
 
     def __repr__(self):
@@ -35,15 +35,26 @@ class SparkDataFrame(Type):
 
 
 class PandasDataFrame(Type):
-    def __init__(self, columns: dict):
-        self._columns = columns.copy()
-        for column, base_type in self._columns.items():
+    def __init__(self, schema: dict):
+        self._schema = schema.copy()
+        for column, base_type in self._schema.items():
             if not isinstance(base_type, Type):
-                self._columns[column] = LiteralType(base_type)
+                self._schema[column] = LiteralType(base_type)
 
     def check_schema(self, instance):
-        import pandas as pd
-        return isinstance(instance, pd.DataFrame) and self._columns in set(instance.columns)
+        import pandas
+        if not isinstance(instance, pandas.DataFrame):
+            return [_exceptions.WrongType(pandas.DataFrame, type(instance))]
+
+        exceptions = []
+        columns = set(instance.columns)
+        for column in self._schema:
+            if column not in columns:
+                exceptions.append(_exceptions.WrongData(column, columns))
+            elif not pandas.np.issubdtype(instance.dtypes[column], self._schema[column].type):
+                exceptions.append(_exceptions.WrongType(self._schema[column].type, instance.dtypes[column]))
+
+        return exceptions
 
 
 class _Container(Type):
