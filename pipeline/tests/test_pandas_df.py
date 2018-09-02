@@ -9,7 +9,7 @@ class TestPandasDataFrame(unittest.TestCase):
 
     def test_type_check(self):
         # ok
-        type = PandasDataFrame(schema={'a': float, 'b': pd.np.dtype('O')})
+        type = PandasDataFrame(schema={'a': pd.np.float64, 'b': pd.np.dtype('O')})
         instance = pd.DataFrame(data={'a': [1.0, 1.0], 'b': ['s', 's']})
         self.assertEqual(type.check_schema(instance), [])
 

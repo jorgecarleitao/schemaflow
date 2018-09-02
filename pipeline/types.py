@@ -2,8 +2,18 @@ import pipeline.exceptions as _exceptions
 
 
 class Type:
+    """
+    The base type of all types. Used to declare new types to be used in :class:`Pipe`.
+
+    The class attribute `requirements` (a set of strings) is used to define if using this type has
+    package requirements (e.g. `numpy`).
+    """
+    requirements = {}
+
     def check_schema(self, instance: object):
         """
+        Checks that the instance has the correct type or schema (composite types).
+
         :param instance:
         :return: a list of exceptions
         """
@@ -29,60 +39,90 @@ class LiteralType(Type):
 
 
 class _DataFrame(Type):
+    """
+    Abstract pipeline representation of a DataFrame. See subclasses for Pandas and PySpark.
+    """
     def __init__(self, schema: dict):
+        """
+        :param schema: dictionary of `(column_name, type)`.
+        """
         self._schema = schema.copy()
         for column, base_type in self._schema.items():
             if not isinstance(base_type, Type):
                 self._schema[column] = LiteralType(base_type)
 
-
-class PySparkDataFrame(_DataFrame):
+    @staticmethod
+    def _own_type():
+        """
+        Returns the DataFrame's type
+        """
+        raise NotImplementedError
 
     @staticmethod
-    def _dtype_to_type(dtype):
-        import pyspark.sql.types as types
-        import numpy
-        return {
-            types.LongType: int,
-            types.DoubleType: float,
-            types.StringType: numpy.dtype('O')}[type(dtype)]
+    def _get_schema(instance):
+        """
+        Return the DataFrame's schema from an instance
+        """
+        raise NotImplementedError
 
     def check_schema(self, instance):
-        import pyspark.sql
-        if not isinstance(instance, pyspark.sql.DataFrame):
-            return [_exceptions.WrongType(pyspark.sql.DataFrame, type(instance))]
+        expected_type = self._own_type()
+
+        if not isinstance(instance, expected_type):
+            return [_exceptions.WrongType(expected_type, type(instance))]
 
         exceptions = []
-        schema = dict((f.name, f.dataType) for f in instance.schema.fields)
-
+        schema = self._get_schema(instance)
         for column in self._schema:
             if column not in schema:
                 exceptions.append(_exceptions.WrongSchema(column, set(schema.keys())))
             else:
-                column_type = self._dtype_to_type(schema[column])
+                column_type = schema[column]
                 expected_type = self._schema[column].type
                 if expected_type != column_type:
-                    exceptions.append(_exceptions.WrongType(expected_type, column_type))
+                    exceptions.append(_exceptions.WrongType(
+                        expected_type, column_type, 'column \'%s\'' % column))
 
         return exceptions
+
+
+class PySparkDataFrame(_DataFrame):
+    """
+    Representation of a pyspark.sql.DataFrame. Requires pyspark.
+    """
+    requirements = {'pyspark'}
+
+    @staticmethod
+    def _own_type():
+        import pyspark.sql
+        return pyspark.sql.DataFrame
+
+    @staticmethod
+    def _get_schema(instance):
+        import pyspark.sql.types
+        import numpy
+        mapping = {
+            pyspark.sql.types.LongType: int,
+            pyspark.sql.types.DoubleType: float,
+            pyspark.sql.types.StringType: numpy.dtype('O')
+        }
+        return dict((f.name, mapping[type(f.dataType)]) for f in instance.schema.fields)
 
 
 class PandasDataFrame(_DataFrame):
+    """
+    Representation of a pandas.DataFrame. Requires pandas.
+    """
+    requirements = {'pandas'}
 
-    def check_schema(self, instance):
+    @staticmethod
+    def _own_type():
         import pandas
-        if not isinstance(instance, pandas.DataFrame):
-            return [_exceptions.WrongType(pandas.DataFrame, type(instance))]
+        return pandas.DataFrame
 
-        exceptions = []
-        columns = set(instance.columns)
-        for column in self._schema:
-            if column not in columns:
-                exceptions.append(_exceptions.WrongSchema(column, columns))
-            elif not pandas.np.issubdtype(instance.dtypes[column], self._schema[column].type):
-                exceptions.append(_exceptions.WrongType(self._schema[column].type, instance.dtypes[column]))
-
-        return exceptions
+    @staticmethod
+    def _get_schema(instance):
+        return dict((column, column_dtype.type) for column, column_dtype in instance.dtypes.items())
 
 
 class _Container(Type):
@@ -125,6 +165,8 @@ class Array(_Container):
     def __init__(self, items_type: type, shape=None):
         import numpy
         assert issubclass(items_type, (numpy.generic, float, int, bool))
+        if items_type == float:
+            items_type = numpy.float64
         super().__init__(LiteralType(items_type))
         assert isinstance(shape, (type(None), tuple))
         self._shape = shape
