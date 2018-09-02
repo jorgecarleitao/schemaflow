@@ -5,7 +5,7 @@ import numpy as np
 from pipeline import pipe, types, exceptions
 
 
-class Pipe(pipe.BasePipe):
+class Pipe(pipe.Pipe):
     # variables required by fit (supervised learning)
     fit_placeholders = {
         # (arbitrary items, arbitrary features)
@@ -56,13 +56,13 @@ class TestPipe(unittest.TestCase):
     def test_check_fit(self):
         p = Pipe()
 
-        # errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'z': [1.0, 1.0]}, {'alpha': 0.1})
-        # self.assertEqual(len(errors), 1)
-        # self.assertEqual(type(errors[0]), exceptions.WrongData)
-        #
-        # errors = p.check_fit({'x': 1, 'y': []}, {'alpha': 0.1})
-        # self.assertEqual(len(errors), 2)
-        # self.assertEqual(type(errors[0]), exceptions.WrongType)
+        errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'z': [1.0, 1.0]}, {'alpha': 0.1})
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(type(errors[0]), exceptions.WrongData)
+
+        errors = p.check_fit({'x': 1, 'y': []}, {'alpha': 0.1})
+        self.assertEqual(len(errors), 2)
+        self.assertEqual(type(errors[0]), exceptions.WrongType)
 
         errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'y': [1.0, 1.0]}, {'alph': 0.1})
         self.assertEqual(len(errors), 1)

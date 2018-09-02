@@ -3,12 +3,12 @@ import pipeline.exceptions as _exceptions
 
 class Type:
     """
-    The base type of all types. Used to declare new types to be used in :class:`Pipe`.
+    The base type of all types. Used to declare new types to be used in :class:`pipeline.pipe.Pipe`.
 
-    The class attribute `requirements` (a set of strings) is used to define if using this type has
+    The class attribute :attr:`requirements` (a set of strings) is used to define if using this type has
     package requirements (e.g. `numpy`).
     """
-    requirements = {}
+    requirements = {}  #: set of packages required for this type to be usable.
 
     def check_schema(self, instance: object):
         """
@@ -20,7 +20,10 @@ class Type:
         raise NotImplementedError
 
 
-class LiteralType(Type):
+class _LiteralType(Type):
+    """
+    A :class:`Type` that wraps literal types (e.g. ``float``). Used internally only.
+    """
     def __init__(self, base_type):
         assert not isinstance(base_type, Type)
         self._base_type = base_type
@@ -49,7 +52,7 @@ class _DataFrame(Type):
         self._schema = schema.copy()
         for column, base_type in self._schema.items():
             if not isinstance(base_type, Type):
-                self._schema[column] = LiteralType(base_type)
+                self._schema[column] = _LiteralType(base_type)
 
     @staticmethod
     def _own_type():
@@ -88,7 +91,7 @@ class _DataFrame(Type):
 
 class PySparkDataFrame(_DataFrame):
     """
-    Representation of a pyspark.sql.DataFrame. Requires pyspark.
+    Representation of a pyspark.sql.DataFrame. Requires ``pyspark``.
     """
     requirements = {'pyspark'}
 
@@ -111,7 +114,7 @@ class PySparkDataFrame(_DataFrame):
 
 class PandasDataFrame(_DataFrame):
     """
-    Representation of a pandas.DataFrame. Requires pandas.
+    Representation of a pandas.DataFrame. Requires ``pandas``.
     """
     requirements = {'pandas'}
 
@@ -126,11 +129,11 @@ class PandasDataFrame(_DataFrame):
 
 
 class _Container(Type):
-    _own_type = LiteralType(list)
+    _own_type = _LiteralType(list)
 
     def __init__(self, items_type):
         if not isinstance(items_type, Type):
-            items_type = LiteralType(items_type)
+            items_type = _LiteralType(items_type)
         self._items_type = items_type
 
     def __repr__(self):
@@ -156,10 +159,17 @@ class _Container(Type):
 
 
 class List(_Container):
-    _own_type = LiteralType(list)
+    _own_type = _LiteralType(list)
+
+
+class Tuple(_Container):
+    _own_type = _LiteralType(tuple)
 
 
 class Array(_Container):
+    """
+    Representation of a numpy.array. Requires ``numpy``.
+    """
     requirements = {'numpy'}
 
     def __init__(self, items_type: type, shape=None):
@@ -167,7 +177,7 @@ class Array(_Container):
         assert issubclass(items_type, (numpy.generic, float, int, bool))
         if items_type == float:
             items_type = numpy.float64
-        super().__init__(LiteralType(items_type))
+        super().__init__(_LiteralType(items_type))
         assert isinstance(shape, (type(None), tuple))
         self._shape = shape
 
@@ -195,8 +205,4 @@ class Array(_Container):
     @property
     def _own_type(self):
         import numpy
-        return LiteralType(numpy.ndarray)
-
-
-class Tuple(_Container):
-    _own_type = LiteralType(tuple)
+        return _LiteralType(numpy.ndarray)
