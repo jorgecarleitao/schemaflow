@@ -2,6 +2,11 @@ class PipelineError(Exception):
     pass
 
 
+class MissingRequirement(Exception):
+    def __init__(self, requirement):
+        self.requirement = requirement
+
+
 class WrongData(PipelineError):
     pass
 

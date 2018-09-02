@@ -24,7 +24,7 @@ class Pipe(pipe.BasePipe):
 
     # parameter assigned in fit()
     fitted_parameters = {
-        'model_': object
+        'model': object
     }
 
     # type and key of transform

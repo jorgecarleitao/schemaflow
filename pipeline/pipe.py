@@ -1,49 +1,42 @@
 import collections
-import logging
+import importlib.util
 
 import pipeline.types
 import pipeline.exceptions as _exceptions
 
 
-logger = logging.getLogger(__name__)
-
-
-class Column:
-    def __init__(self, type):
-        if not isinstance(type, pipeline.types.Type):
-            type = pipeline.types.LiteralType(type)
-        self._type = type
-
-    @property
-    def type(self):
-        return self._type
-
-    def is_valid_type(self, instance):
-        return self.type.check_schema(instance)
-
-
-class Parameter(Column):
-    pass
-
-
-class FittedParameter(Column):
-    pass
-
-
-class Placeholder(Column):
-    pass
-
-
-class Output(Column):
-    pass
-
-
-class FitPlaceholder(Column):
-    pass
-
-
 class BasePipe:
-    requirements = {}
+    """
+    The base class of all pipes. This class represents a stateful data transformation.
+
+    Data in this context consists of a Python dictionary whose each value is a type with some representation of data,
+    either in-memory (e.g. float, pandas.DataFrame) of remote (e.g. pyspark.sql.DataFrame, sqlalchemy).
+
+    A :class:`BasePipe` is defined by:
+
+        - a function `transform` that:
+            - uses the keys `placeholders` from `data`
+            - uses the `state`
+            - modifies the keys in `result` in `data`
+        - a function `fit` that:
+            - uses (training) keys `fit_placeholders` from `data`
+            - uses (passed) `fit_parameters`
+            - modifies the keys `fitted_parameters` in `state`
+        - a set of `requirements` (a set of package names, e.g. `{'pandas'}`) of the transformation
+
+    All placeholders and parameters have a Type that is used to check that the Pipe's input is consistent using
+
+        - `check_fit`
+        - `check_transform`
+
+    The existence of the requirements can be checked using
+
+        - `check_requirements`
+
+    The rational is that you can run `check_*` with access only to the data's schema.
+    This is specially important when the pipeline is an expensive operation.
+    """
+    requirements = set()
 
     # data required in fit
     fit_placeholders = {}
@@ -74,6 +67,23 @@ class BasePipe:
         if not isinstance(type, pipeline.types.Type):
             type = pipeline.types.LiteralType(type)
         return type
+
+    def check_requirements(self):
+        requirements = self.requirements
+        for type in self.fit_placeholders.values():
+            requirements.add(type)
+        for type in self.placeholders.values():
+            requirements.add(type)
+        for type in self.fit_parameters.values():
+            requirements.add(type)
+        for type in self.fitted_parameters.values():
+            requirements.add(type)
+
+        exceptions = []
+        for requirement in requirements:
+            if importlib.util.find_spec(requirement) is None:
+                exceptions.append(_exceptions.MissingRequirement(requirement))
+        return exceptions
 
     def check_fit(self, data, parameters):
         exceptions = []
