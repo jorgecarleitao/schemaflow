@@ -139,22 +139,11 @@ class _Container(Type):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._items_type.type.__name__)
 
-    @staticmethod
-    def _check_type(item, expected_type):
-        if hasattr(expected_type, 'check_schema'):
-            return expected_type.check_schema(item)
-        elif isinstance(item, expected_type):
-            return [_exceptions.WrongType(expected_type, type(item))]
-        return []
-
     def check_schema(self, instance):
         exceptions = self._own_type.check_schema(instance)
         if not exceptions:
             for i, item in enumerate(instance):
-                if hasattr(self._items_type, 'check_schema'):
-                    exceptions += self._items_type.check_schema(item)
-                elif isinstance(item, self._items_type):
-                    exceptions.append(_exceptions.WrongType(self._items_type, type(item)))
+                exceptions += self._items_type.check_schema(item)
         return exceptions
 
 
@@ -183,14 +172,13 @@ class Array(_Container):
 
     def check_schema(self, instance):
         exceptions = self._own_type.check_schema(instance)
-        if hasattr(instance, 'dtype'):
+        if not exceptions:
+            assert hasattr(instance, 'dtype')
             if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
                 if not self._is_valid_shape(instance.shape):
                     exceptions.append(_exceptions.WrongShape(self._shape, instance.shape))
             else:
                 exceptions.append(_exceptions.WrongType(self._items_type.type, instance.dtype))
-        else:
-            exceptions.append(_exceptions.WrongType(self._items_type.type, type(instance)))
         return exceptions
 
     def _is_valid_shape(self, shape):

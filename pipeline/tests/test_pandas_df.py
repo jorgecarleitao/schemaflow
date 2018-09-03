@@ -24,3 +24,7 @@ class TestPandasDataFrame(unittest.TestCase):
         # wrong column type
         instance = pd.DataFrame(data={'a': [1.0, 1.0], 'b': [1.0, 1.0]})
         self.assertEqual(len(type.check_schema(instance)), 1)
+
+        # wrong datum type
+        instance = 1
+        self.assertEqual(len(type.check_schema(instance)), 1)

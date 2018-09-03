@@ -31,3 +31,11 @@ class TestArray(unittest.TestCase):
         instance = np.array([1.0, 2.0])
         array_type = Array(float, shape=(None,))
         self.assertEqual(array_type.check_schema(instance), [])
+
+        instance = np.float64(2)
+        array_type = Array(float, shape=(None,))
+        self.assertEqual(len(array_type.check_schema(instance)), 1)
+
+        instance = np.array([object, 2.0])
+        array_type = Array(float, shape=(None,))
+        self.assertEqual(len(array_type.check_schema(instance)), 1)

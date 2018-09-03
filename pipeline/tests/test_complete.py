@@ -61,7 +61,7 @@ class TestPipe(unittest.TestCase):
         self.assertEqual(type(errors[0]), exceptions.WrongData)
 
         errors = p.check_fit({'x': 1, 'y': []}, {'alpha': 0.1})
-        self.assertEqual(len(errors), 2)
+        self.assertEqual(len(errors), 1)
         self.assertEqual(type(errors[0]), exceptions.WrongType)
 
         errors = p.check_fit({'x': np.array([[1.0], [2.0]]), 'y': [1.0, 1.0]}, {'alph': 0.1})
