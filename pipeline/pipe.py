@@ -1,4 +1,3 @@
-import collections
 import importlib.util
 
 import pipeline.types
@@ -16,19 +15,20 @@ class Pipe:
 
     - a function :meth:`transform` that:
 
-        - uses the keys :attr:`placeholders` from ``data``
+        - uses the keys :attr:`transform_modifies` from ``data``
         - uses the :attr:`state`
-        - modifies the keys in :attr:`result` in ``data``
+        - modifies the keys in :attr:`transform_modifies` in ``data``
 
     - a function :meth:`fit` that:
 
-        - uses (training) keys :attr:`fit_placeholders` from ``data``
+        - uses (training) keys :attr:`fit_data` from ``data``
         - uses (passed) :attr:`fit_parameters`
         - modifies the keys :attr:`fitted_parameters` in :attr:`state`
 
     - a set of :attr:`requirements` (a set of package names, e.g. ``{'pandas'}``) of the transformation
 
-    All placeholders and parameters have a Type that is used to check that the Pipe's input is consistent using
+    All :attr:`transform_modifies` and :attr:`fit_data` have a :class:`~pipeline.types.Type` that can
+    be used to check that the Pipe's input is consistent, with
 
         - :meth:`check_fit`
         - :meth:`check_transform`
@@ -37,28 +37,28 @@ class Pipe:
 
         - :meth:`check_requirements`
 
-    The rational is that you can run `check_*` with access only to the data's schema.
+    The rational is that you can run ``check_*`` with access only to the data's schema.
     This is specially important when the pipeline is an expensive operation.
     """
     #: set of packages required by the Pipe.
     requirements = set()
 
-    #: class attribute; specifies the data required in :meth:`~fit`;
-    #: a dictionary ``str`` -> :class:`pipeline.types.Type`.
-    fit_placeholders = {}
+    #: the data schema required in :meth:`~fit`;
+    #: a dictionary ``str``: :class:`~pipeline.types.Type`.
+    fit_data = {}
 
-    #: class attribute; specifies the data required in :meth:`~transform`;
-    #: a dictionary ``str`` -> :class:`pipeline.type.Type`.
-    placeholders = {}
+    #: the data schema required in :meth:`~transform`;
+    #: a dictionary ``str``: :class:`~pipeline.type.Type`.
+    transform_data = {}
 
-    #: parameter passed to fit()
+    #: parameters' schema passed to :meth:`~fit`
     fit_parameters = {}
 
-    #: parameter assigned in fit()
+    #: schema of the parameters assigned in :meth:`~fit`
     fitted_parameters = {}
 
-    #: type and key of transform
-    result = {}
+    #: type and key of :meth:`~transform`
+    transform_modifies = {}
 
     def __init__(self):
         self.state = {}  #: A dictionary with the states of the Pipe. Use [] operator to access and modify it.
@@ -82,9 +82,9 @@ class Pipe:
         :return: a list of exceptions with missing requirements
         """
         requirements = self.requirements
-        for type in self.fit_placeholders.values():
+        for type in self.fit_data.values():
             requirements.add(type)
-        for type in self.placeholders.values():
+        for type in self.transform_data.values():
             requirements.add(type)
         for type in self.fit_parameters.values():
             requirements.add(type)
@@ -103,7 +103,7 @@ class Pipe:
 
         :param data:
         :param parameters:
-        :return: a list of (subclasses of) :class:`pipeline.exceptions.PipelineError` with all missing arguments.
+        :return: a list of (subclasses of) :class:`~pipeline.exceptions.PipelineError` with all missing arguments.
         """
         if parameters is None:
             parameters = {}
@@ -111,15 +111,15 @@ class Pipe:
         exceptions = []
 
         data_keys = set(data.keys())
-        required_keys = set(self.fit_placeholders.keys())
+        required_keys = set(self.fit_data.keys())
         if len(required_keys - data_keys):
             exceptions.append(
                 _exceptions.WrongData('Missing arguments in fit:'
                                       '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
             )
 
-        for key in self.fit_placeholders:
-            expected_type = self._get_type(self.fit_placeholders[key])
+        for key in self.fit_data:
+            expected_type = self._get_type(self.fit_data[key])
             if key in data:
                 new_exceptions = expected_type.check_schema(data[key])
                 for exception in new_exceptions:
@@ -154,15 +154,15 @@ class Pipe:
         exceptions = []
 
         data_keys = set(data.keys())
-        required_keys = set(self.placeholders.keys())
+        required_keys = set(self.transform_data.keys())
         if len(required_keys - data_keys):
             exceptions.append(
                 _exceptions.WrongData('Missing arguments in transform:'
                                       '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
             )
 
-        for key in self.placeholders:
-            expected_type = self._get_type(self.placeholders[key])
+        for key in self.transform_data:
+            expected_type = self._get_type(self.transform_data[key])
             if key in data:
                 new_exceptions = expected_type.check_schema(data[key])
                 for exception in new_exceptions:
@@ -170,7 +170,7 @@ class Pipe:
         return exceptions
 
     def apply_transform_schema(self, data):
-        for key, value in self.result.items():
+        for key, value in self.transform_modifies.items():
             data[key] = value.type
         return data
 
@@ -186,79 +186,9 @@ class Pipe:
 
     def transform(self, data: dict):
         """
-        Modifies the data keys identified in :attr:`result`.
+        Modifies the data keys identified in :attr:`transform_modifies`.
 
         :param data:
         :return: the modified data
         """
         raise NotImplementedError
-
-
-class Pipeline:
-    def __init__(self, pipes):
-        if isinstance(pipes, collections.OrderedDict):
-            self.pipes = pipes
-            return
-        elif not isinstance(pipes, list):
-            raise TypeError('Pipes must a list or OrderedDict')
-
-        self.pipes = collections.OrderedDict()
-        for i, item in enumerate(pipes):
-            if isinstance(item, tuple):
-                assert len(item) == 2 and isinstance(item[1], Pipe) and \
-                       isinstance(item[0], str) and '/' not in item[0]
-                self.pipes[item[0]] = item[1]
-            elif isinstance(item, Pipe):
-                self.pipes[str(i)] = item
-            else:
-                raise TypeError('Items must be pipes or a tuple with `(str, Pipe)`')
-
-    def check_transform(self, data=None):
-        if data is None:
-            data = {}
-
-        errors = []
-        for key, pipe in self.pipes.items():
-            errors += pipe.check_transform(data)
-            data = pipe.apply_transform_schema(data)
-        return errors
-
-    def check_fit(self, data=None, parameters=None):
-        if data is None:
-            data = {}
-        if parameters is None:
-            parameters = {}
-
-        errors = []
-        for key, pipe in self.pipes.items():
-            if key in parameters:
-                errors += pipe.check_fit(data, parameters[key])
-            else:
-                errors += pipe.check_fit(data, parameters)
-            data = pipe.apply_transform_schema(data)
-        return errors
-
-    @property
-    def requirements(self):
-        requirements = set()
-        for pipe in self.pipes:
-            requirements.union(pipe.requirements)
-        return requirements
-
-    def transform(self, data: dict):
-        for key, pipe in self.pipes.items():
-            data = pipe.transform(data)
-        return data
-
-    def fit(self, data: dict, parameters=None):
-        """
-        Fits all pipes in sequence.
-        """
-        if parameters is None:
-            parameters = {}
-        for key, pipe in self.pipes.items():
-            if key in parameters:
-                pipe.fit(data, parameters[key])
-            else:
-                pipe.fit(data)
-            data = pipe.transform(data)

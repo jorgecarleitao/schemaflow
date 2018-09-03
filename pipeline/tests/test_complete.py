@@ -7,13 +7,13 @@ from pipeline import pipe, types, exceptions
 
 class Pipe(pipe.Pipe):
     # variables required by fit (supervised learning)
-    fit_placeholders = {
+    fit_data = {
         # (arbitrary items, arbitrary features)
         'x': types.Array(np.float64, shape=(None, None)),
         'y': types.List(float)
     }
 
-    placeholders = {
+    transform_data = {
         'x': types.List(float)
     }
 
@@ -28,7 +28,7 @@ class Pipe(pipe.Pipe):
     }
 
     # type and key of transform
-    result = {
+    transform_modifies = {
         'model': object
     }
 

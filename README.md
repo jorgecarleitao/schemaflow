@@ -28,7 +28,7 @@ on each pipe and therefore the whole pipeline.
 ## Build documentation
 
     pip install -r requirements_docs.txt
-    cd docs && make html
+    cd docs && make html && cd ..
     open docs/build/html/index.html
 
 ## Use cases
