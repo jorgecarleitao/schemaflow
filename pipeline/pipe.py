@@ -171,7 +171,9 @@ class Pipe:
 
     def apply_transform_schema(self, data):
         for key, value in self.transform_modifies.items():
-            data[key] = value.type
+            if not isinstance(value, pipeline.types.Type):
+                value = pipeline.types._LiteralType(value)
+            data[key] = value
         return data
 
     def fit(self, data: dict, parameters: dict=None):
@@ -182,7 +184,7 @@ class Pipe:
         :param parameters:
         :return: None
         """
-        raise NotImplementedError
+        pass
 
     def transform(self, data: dict):
         """
@@ -191,4 +193,4 @@ class Pipe:
         :param data:
         :return: the modified data
         """
-        raise NotImplementedError
+        return data

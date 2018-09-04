@@ -1,8 +1,14 @@
 class PipelineError(Exception):
+    """
+    The base exception of Pipeline
+    """
     pass
 
 
 class MissingRequirement(Exception):
+    """
+    class:`~PipelineError` raised when a requirement is missing
+    """
     def __init__(self, requirement):
         self.requirement = requirement
 

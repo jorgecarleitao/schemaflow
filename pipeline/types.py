@@ -19,6 +19,9 @@ class Type:
         """
         raise NotImplementedError
 
+    def __eq__(self, other):
+        return type(other) == type(self)
+
 
 class _LiteralType(Type):
     """
@@ -39,6 +42,9 @@ class _LiteralType(Type):
         if not isinstance(instance, self._base_type):
             return [_exceptions.WrongType(self._base_type, type(instance))]
         return []
+
+    def __eq__(self, other):
+        return super().__eq__(other) and other._base_type == self._base_type
 
 
 class _DataFrame(Type):
@@ -140,11 +146,25 @@ class _Container(Type):
         return '%s(%s)' % (self.__class__.__name__, self._items_type.type.__name__)
 
     def check_schema(self, instance):
-        exceptions = self._own_type.check_schema(instance)
-        if not exceptions:
-            for i, item in enumerate(instance):
-                exceptions += self._items_type.check_schema(item)
-        return exceptions
+        if isinstance(instance, Type):
+            # if the instance is already a type, we do type checking
+            if instance != self:
+                return [_exceptions.WrongType(instance, self)]
+            return []
+        else:
+            # the instance is not a type, we do type checking
+            exceptions = self._own_type.check_schema(instance)
+            if exceptions:
+                return exceptions
+
+            exceptions = []
+            if not exceptions:
+                for i, item in enumerate(instance):
+                    exceptions += self._items_type.check_schema(item)
+            return exceptions
+
+    def __eq__(self, other):
+        return super().__eq__(other) and other._items_type == self._items_type
 
 
 class List(_Container):
@@ -160,6 +180,9 @@ class Array(_Container):
     Representation of a numpy.array. Requires ``numpy``.
     """
     requirements = {'numpy'}
+
+    def __eq__(self, other):
+        return super().__eq__(other) and other._shape == self._shape
 
     def __init__(self, items_type: type, shape=None):
         import numpy

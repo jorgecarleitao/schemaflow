@@ -11,21 +11,29 @@ Introduction
 This is a package to write robust pipelines for data science and data engineering in Python.
 Thanks for checking it out.
 
+When to use this package
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use it when you are fairly certain that:
+
+* there is the need for a complex data pipeline (e.g. more than 4 data sources)
+* the data transforms are expensive (e.g. Spark, Hive, SQL)
+* your data pipeline aims to be maintainable and reusable (e.g. production code)
+
 What is a pipeline?
 ^^^^^^^^^^^^^^^^^^^
 
-A pipeline represents a sequence of stateful transformations (pipes) that convert
-a generic set of data (e.g. spark DFs and constants) into another set of
-data (e.g. pandas DFs and a ML model).
-
-We use the word stateful because pipes can have parameters computed from training data.
+A :class:`~pipeline.pipeline.Pipeline` represents a sequence of *stateful transformations*
+(each a :class:`~pipeline.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
+into another set of data (e.g. pandas DFs and a ML model).
+"Stateful" here represents the concept that pipes can have parameters computed from training data.
 
 The problem that this abstraction solves
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A major challenge in creating a robust data pipeline is guaranteeing interoperability between
 pipes. I.e. how do we guarantee that the pipe that someone wrote is compatible
-with my pipeline?
+with your pipe?
 
 There are 2 common ways to address this:
 
@@ -42,10 +50,10 @@ different conventions and different ways to building the pipe.
 The solution this package adopts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This package declares an interface to define a stateful data transformation that gives the developer the opportunity to
-declare what comes in, what comes out, and what states are modified.
+This package declares a simple interface to define a stateful data transformation that gives the developer
+the opportunity to declare what comes in, what comes out, and what states are modified.
 
-Under this interface, as a developer, you define a pipe as follows:
+Under this interface, as a developer, you define a :class:`~pipeline.pipe.Pipe` as follows:
 
 .. code-block:: python
 
@@ -97,7 +105,7 @@ Without reading nor executing ``fit`` and ``transform``, we know how ``data`` wi
 3. it transforms ``data['b']``.
 
 This allows to check whether a ``Pipeline`` is consistent **without** executing
-``fit`` or ``transform`` of *any* pipe. I.e. it is a fast check.
+``fit`` or ``transform`` of *any* pipe.
 
 Pipeline
 --------
@@ -122,10 +130,3 @@ Exceptions
 
 .. automodule:: pipeline.exceptions
    :members:
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
