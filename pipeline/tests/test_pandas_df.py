@@ -7,7 +7,7 @@ from pipeline.types import PandasDataFrame
 
 class TestPandasDataFrame(unittest.TestCase):
 
-    def test_type_check(self):
+    def test_instance_check(self):
         # ok
         type = PandasDataFrame(schema={'a': pd.np.float64, 'b': pd.np.dtype('O')})
         instance = pd.DataFrame(data={'a': [1.0, 1.0], 'b': ['s', 's']})
@@ -28,3 +28,18 @@ class TestPandasDataFrame(unittest.TestCase):
         # wrong datum type
         instance = 1
         self.assertEqual(len(type.check_schema(instance)), 1)
+
+    def test_type_check(self):
+        # ok
+        type = PandasDataFrame(schema={'a': pd.np.float64, 'b': pd.np.dtype('O')})
+        self.assertEqual(type.check_schema(type), [])
+
+        # missing column
+        instance = pd.DataFrame(data={'a': [1.0, 1.0]})
+        self.assertEqual(len(type.check_schema(PandasDataFrame(schema={'a': pd.np.float64}))), 1)
+
+        # wrong column type
+        self.assertEqual(len(type.check_schema(PandasDataFrame(schema={'a': pd.np.float64, 'b': pd.np.float64}))), 1)
+
+        # wrong datum type
+        self.assertEqual(len(type.check_schema(int)), 1)

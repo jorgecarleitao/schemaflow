@@ -10,14 +10,25 @@ class Type:
     """
     requirements = {}  #: set of packages required for this type to be usable.
 
+    def _check_as_instance(self, instance: object):
+        raise NotImplementedError
+
+    def _check_as_type(self, instance):
+        if type(instance) != type(self):
+            return [_exceptions.WrongType(instance, self)]
+        return []
+
     def check_schema(self, instance: object):
         """
-        Checks that the instance has the correct type or schema (composite types).
+        Checks that the instance has the correct type and schema (composite types).
 
-        :param instance:
+        :param instance: a datum in either its representation form or on its schema form.
         :return: a list of exceptions
         """
-        raise NotImplementedError
+        if isinstance(instance, Type):
+            return self._check_as_type(instance)
+        else:
+            return self._check_as_instance(instance)
 
     def __eq__(self, other):
         return type(other) == type(self)
@@ -32,19 +43,22 @@ class _LiteralType(Type):
         self._base_type = base_type
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self._base_type.__name__)
+        return '%s(%s)' % (self.__class__.__name__, self._base_type)
 
     @property
     def type(self):
         return self._base_type
 
-    def check_schema(self, instance):
+    def _check_as_instance(self, instance: object):
         if not isinstance(instance, self._base_type):
             return [_exceptions.WrongType(self._base_type, type(instance))]
         return []
 
-    def __eq__(self, other):
-        return super().__eq__(other) and other._base_type == self._base_type
+    def _check_as_type(self, instance):
+        exceptions = super()._check_as_type(instance)
+        if not exceptions and instance._base_type != self._base_type:
+            exceptions.append(_exceptions.WrongType(instance, self))
+        return exceptions
 
 
 class _DataFrame(Type):
@@ -74,25 +88,31 @@ class _DataFrame(Type):
         """
         raise NotImplementedError
 
-    def check_schema(self, instance):
-        expected_type = self._own_type()
-
-        if not isinstance(instance, expected_type):
-            return [_exceptions.WrongType(expected_type, type(instance))]
-
+    def _check_schema(self, schema):
         exceptions = []
-        schema = self._get_schema(instance)
         for column in self._schema:
             if column not in schema:
                 exceptions.append(_exceptions.WrongSchema(column, set(schema.keys())))
             else:
-                column_type = schema[column]
+                column_type = schema[column].type
                 expected_type = self._schema[column].type
                 if expected_type != column_type:
                     exceptions.append(_exceptions.WrongType(
                         expected_type, column_type, 'column \'%s\'' % column))
-
         return exceptions
+
+    def _check_as_type(self, instance):
+        exceptions = super()._check_as_type(instance)
+        if not exceptions:
+            exceptions += self._check_schema(instance._schema)
+        return exceptions
+
+    def _check_as_instance(self, instance: object):
+        expected_type = self._own_type()
+
+        if not isinstance(instance, expected_type):
+            return [_exceptions.WrongType(expected_type, type(instance))]
+        return self._check_schema(self._get_schema(instance))
 
 
 class PySparkDataFrame(_DataFrame):
@@ -111,9 +131,9 @@ class PySparkDataFrame(_DataFrame):
         import pyspark.sql.types
         import numpy
         mapping = {
-            pyspark.sql.types.LongType: int,
-            pyspark.sql.types.DoubleType: float,
-            pyspark.sql.types.StringType: numpy.dtype('O')
+            pyspark.sql.types.LongType: _LiteralType(int),
+            pyspark.sql.types.DoubleType: _LiteralType(float),
+            pyspark.sql.types.StringType: _LiteralType(numpy.dtype('O'))
         }
         return dict((f.name, mapping[type(f.dataType)]) for f in instance.schema.fields)
 
@@ -131,7 +151,7 @@ class PandasDataFrame(_DataFrame):
 
     @staticmethod
     def _get_schema(instance):
-        return dict((column, column_dtype.type) for column, column_dtype in instance.dtypes.items())
+        return dict((column, column_dtype) for column, column_dtype in instance.dtypes.items())
 
 
 class _Container(Type):
@@ -145,26 +165,23 @@ class _Container(Type):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._items_type.type.__name__)
 
-    def check_schema(self, instance):
-        if isinstance(instance, Type):
-            # if the instance is already a type, we do type checking
-            if instance != self:
-                return [_exceptions.WrongType(instance, self)]
-            return []
-        else:
-            # the instance is not a type, we do type checking
-            exceptions = self._own_type.check_schema(instance)
-            if exceptions:
-                return exceptions
+    def _check_as_type(self, instance):
+        exceptions = super()._check_as_type(instance)
+        if not exceptions and self._items_type.type != instance._items_type.type:
+            exceptions += [_exceptions.WrongType(self, instance)]
+        return exceptions
 
-            exceptions = []
-            if not exceptions:
-                for i, item in enumerate(instance):
-                    exceptions += self._items_type.check_schema(item)
+    def _check_as_instance(self, instance: object):
+        # the instance is not a type, we do type checking
+        exceptions = self._own_type.check_schema(instance)
+        if exceptions:
             return exceptions
 
-    def __eq__(self, other):
-        return super().__eq__(other) and other._items_type == self._items_type
+        exceptions = []
+        if not exceptions:
+            for i, item in enumerate(instance):
+                exceptions += self._items_type.check_schema(item)
+        return exceptions
 
 
 class List(_Container):
@@ -181,9 +198,6 @@ class Array(_Container):
     """
     requirements = {'numpy'}
 
-    def __eq__(self, other):
-        return super().__eq__(other) and other._shape == self._shape
-
     def __init__(self, items_type: type, shape=None):
         import numpy
         assert issubclass(items_type, (numpy.generic, float, int, bool))
@@ -193,7 +207,14 @@ class Array(_Container):
         assert isinstance(shape, (type(None), tuple))
         self._shape = shape
 
-    def check_schema(self, instance):
+    def _check_as_type(self, instance):
+        exceptions = super()._check_as_type(instance)
+        if not exceptions:
+            if not self._is_valid_shape(instance._shape):
+                exceptions.append(_exceptions.WrongShape(self._shape, instance._shape))
+        return exceptions
+
+    def _check_as_instance(self, instance: object):
         exceptions = self._own_type.check_schema(instance)
         if not exceptions:
             assert hasattr(instance, 'dtype')
