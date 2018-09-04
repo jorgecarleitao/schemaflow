@@ -144,7 +144,7 @@ class Pipe:
 
         return exceptions
 
-    def check_transform(self, data):
+    def check_transform(self, data: dict):
         """
         Checks that a given data has a valid schema to be used in :meth:`transform`.
 

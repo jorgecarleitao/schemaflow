@@ -7,6 +7,9 @@ class Pipeline(pipeline.pipe.Pipe):
     """
     A linear sequence of :class:`~pipeline.pipe.Pipe`'s that operate in sequence.
 
+    :class:`~pipeline.pipeline.Pipeline` is a :class:`~pipeline.pipe.Pipe` and can be part of
+    another :class:`~pipeline.pipeline.Pipeline`.
+
     :param pipes: a ``list`` or ``OrderedDict`` of :attr:`~pipeline.pipe.Pipe`.
         If passed as a list, you can either pass pipes or tuples ``(name, Pipe)``.
     """
@@ -21,7 +24,7 @@ class Pipeline(pipeline.pipe.Pipe):
             raise TypeError('Pipes must a list or OrderedDict')
 
         #: An ``OrderedDict`` whose keys are the pipe's names or ``str(index)`` where ``index`` is the pipe's
-        #: position in the sequence and the values are :attr:`~pipeline.pipe.Pipe`.
+        #: position in the sequence and the values are :attr:`~pipeline.pipe.Pipe`'s.
         self.pipes = collections.OrderedDict()
         for i, item in enumerate(pipes):
             if isinstance(item, tuple):
@@ -43,7 +46,7 @@ class Pipeline(pipeline.pipe.Pipe):
     @property
     def transform_data(self):
         """
-        The :attr:`~pipeline.pipe.Pipe.transform_modifies` of the first pipe of the pipeline.
+        The :attr:`~pipeline.pipe.Pipe.transform_data` of the first pipe of the pipeline.
         """
         return self.pipes[0].transform_data
 
@@ -76,7 +79,7 @@ class Pipeline(pipeline.pipe.Pipe):
             requirements = requirements.union(pipe.requirements)
         return requirements
 
-    def check_transform(self, data=None):
+    def check_transform(self, data: dict=None):
         if data is None:
             data = {}
 
@@ -86,7 +89,7 @@ class Pipeline(pipeline.pipe.Pipe):
             data = pipe.apply_transform_schema(data)
         return errors
 
-    def check_fit(self, data=None, parameters=None):
+    def check_fit(self, data: dict, parameters: dict=None):
         if data is None:
             data = {}
         if parameters is None:
@@ -106,7 +109,7 @@ class Pipeline(pipeline.pipe.Pipe):
             data = pipe.transform(data)
         return data
 
-    def fit(self, data: dict, parameters=None):
+    def fit(self, data: dict, parameters: dict=None):
         """
         Fits all pipes in sequence.
         """
