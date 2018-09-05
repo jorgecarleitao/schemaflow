@@ -1,6 +1,6 @@
 import unittest
 
-from pipeline.types import List, Tuple
+from schemaflow.types import List, Tuple
 
 
 class TestListTuple(unittest.TestCase):

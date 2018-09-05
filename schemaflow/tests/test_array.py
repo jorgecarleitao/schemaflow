@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from pipeline.types import Array
+from schemaflow.types import Array
 
 
 class TestArray(unittest.TestCase):

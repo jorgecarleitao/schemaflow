@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Pipeline'
+project = 'Schemaflow'
 copyright = '2018, Jorge C. Leitao'
 author = 'Jorge C. Leitao'
 
@@ -134,7 +134,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Pipeline.tex', 'Pipeline Documentation',
+    (master_doc, 'schemaflow.tex', 'Pipeline Documentation',
      'Jorge C. Leitao', 'manual'),
 ]
 
@@ -144,7 +144,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pipeline', 'Pipeline Documentation',
+    (master_doc, 'schemaflow', 'Pipeline Documentation',
      [author], 1)
 ]
 
@@ -155,8 +155,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Pipeline', 'Pipeline Documentation',
-     author, 'Pipeline', 'One line description of project.',
+    (master_doc, 'Schemaflow', 'Schemaflow Documentation',
+     author, 'Schemaflow', 'One line description of project.',
      'Miscellaneous'),
 ]
 

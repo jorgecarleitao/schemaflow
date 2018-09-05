@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from pipeline.types import PandasDataFrame
+from schemaflow.types import PandasDataFrame
 
 
 class TestPandasDataFrame(unittest.TestCase):

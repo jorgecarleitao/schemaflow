@@ -1,4 +1,4 @@
-# Dataflow
+# SchemaFlow
 
 This is a a package to write data pipelines for data science systematically in Python.
 Thanks for checking it out.

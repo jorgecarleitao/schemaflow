@@ -1,9 +1,9 @@
-import pipeline.exceptions as _exceptions
+import schemaflow.exceptions as _exceptions
 
 
 class Type:
     """
-    The base type of all types. Used to declare new types to be used in :class:`pipeline.pipe.Pipe`.
+    The base type of all types. Used to declare new types to be used in :class:`schemaflow.pipe.Pipe`.
 
     The class attribute :attr:`requirements` (a set of strings) is used to define if using this type has
     package requirements (e.g. `numpy`).
@@ -60,7 +60,7 @@ class _LiteralType(Type):
 
 class _DataFrame(Type):
     """
-    Abstract pipeline representation of a DataFrame. See subclasses for Pandas and PySpark.
+    Abstract schemaflow representation of a DataFrame. See subclasses for Pandas and PySpark.
     """
     def __init__(self, schema: dict):
         """

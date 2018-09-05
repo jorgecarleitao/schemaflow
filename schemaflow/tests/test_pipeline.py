@@ -1,8 +1,8 @@
 import unittest
 
-from pipeline.pipeline import Pipeline
-from pipeline.pipe import Pipe
-from pipeline import types
+from schemaflow.pipeline import Pipeline
+from schemaflow.pipe import Pipe
+from schemaflow import types
 
 
 class Pipe1(Pipe):

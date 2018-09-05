@@ -23,8 +23,8 @@ Use it when you are fairly certain that:
 What is a pipeline?
 ^^^^^^^^^^^^^^^^^^^
 
-A :class:`~pipeline.pipeline.Pipeline` represents a sequence of *stateful transformations*
-(each a :class:`~pipeline.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
+A :class:`~schemaflow.pipeline.Pipeline` represents a sequence of *stateful transformations*
+(each a :class:`~schemaflow.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
 into another set of data (e.g. pandas DFs and a ML model).
 "Stateful" here represents the concept that pipes can have parameters computed from training data.
 
@@ -53,7 +53,7 @@ The solution this package adopts
 This package declares a simple interface to define a stateful data transformation that gives the developer
 the opportunity to declare what comes in, what comes out, and what states are modified.
 
-Under this interface, as a developer, you define a :class:`~pipeline.pipe.Pipe` as follows:
+Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe` as follows:
 
 .. code-block:: python
 
@@ -131,23 +131,23 @@ which does not execute ``fit`` nor ``transform``.
 Pipeline
 --------
 
-.. automodule:: pipeline.pipeline
+.. automodule:: schemaflow.pipeline
    :members:
 
 Pipe
 ----
 
-.. automodule:: pipeline.pipe
+.. automodule:: schemaflow.pipe
    :members:
 
 Types
 -----
 
-.. automodule:: pipeline.types
+.. automodule:: schemaflow.types
    :members:
 
 Exceptions
 ----------
 
-.. automodule:: pipeline.exceptions
+.. automodule:: schemaflow.exceptions
    :members:

@@ -1,16 +1,16 @@
 import collections
 
-import pipeline.pipe
+import schemaflow.pipe
 
 
-class Pipeline(pipeline.pipe.Pipe):
+class Pipeline(schemaflow.pipe.Pipe):
     """
-    A linear sequence of :class:`~pipeline.pipe.Pipe`'s that operate in sequence.
+    A linear sequence of :class:`~schemaflow.pipe.Pipe`'s that operate in sequence.
 
-    :class:`~pipeline.pipeline.Pipeline` is a :class:`~pipeline.pipe.Pipe` and can be part of
-    another :class:`~pipeline.pipeline.Pipeline`.
+    :class:`~schemaflow.schemaflow.Pipeline` is a :class:`~schemaflow.pipe.Pipe` and can be part of
+    another :class:`~schemaflow.schemaflow.Pipeline`.
 
-    :param pipes: a ``list`` or ``OrderedDict`` of :attr:`~pipeline.pipe.Pipe`.
+    :param pipes: a ``list`` or ``OrderedDict`` of :attr:`~schemaflow.pipe.Pipe`.
         If passed as a list, you can either pass pipes or tuples ``(name, Pipe)``.
     """
     def __init__(self, pipes):
@@ -24,14 +24,14 @@ class Pipeline(pipeline.pipe.Pipe):
             raise TypeError('Pipes must a list or OrderedDict')
 
         #: An ``OrderedDict`` whose keys are the pipe's names or ``str(index)`` where ``index`` is the pipe's
-        #: position in the sequence and the values are :attr:`~pipeline.pipe.Pipe`'s.
+        #: position in the sequence and the values are :attr:`~schemaflow.pipe.Pipe`'s.
         self.pipes = collections.OrderedDict()
         for i, item in enumerate(pipes):
             if isinstance(item, tuple):
-                assert len(item) == 2 and isinstance(item[1], pipeline.pipe.Pipe) and \
+                assert len(item) == 2 and isinstance(item[1], schemaflow.pipe.Pipe) and \
                        isinstance(item[0], str) and '/' not in item[0]
                 self.pipes[item[0]] = item[1]
-            elif isinstance(item, pipeline.pipe.Pipe):
+            elif isinstance(item, schemaflow.pipe.Pipe):
                 self.pipes[str(i)] = item
             else:
                 raise TypeError('Items must be pipes or a tuple with `(str, Pipe)`')
@@ -39,21 +39,21 @@ class Pipeline(pipeline.pipe.Pipe):
     @property
     def fit_data(self):
         """
-        The :attr:`~pipeline.pipe.Pipe.fit_data` of the first pipe of the pipeline.
+        The :attr:`~schemaflow.pipe.Pipe.fit_data` of the first pipe of the schemaflow.
         """
         return self.pipes[0].fit_data
 
     @property
     def transform_data(self):
         """
-        The :attr:`~pipeline.pipe.Pipe.transform_data` of the first pipe of the pipeline.
+        The :attr:`~schemaflow.pipe.Pipe.transform_data` of the first pipe of the schemaflow.
         """
         return self.pipes[0].transform_data
 
     @property
     def transform_modifies(self):
         """
-        The :attr:`~pipeline.pipe.Pipe.transform_modifies` of the last pipe of the pipeline.
+        The :attr:`~schemaflow.pipe.Pipe.transform_modifies` of the last pipe of the schemaflow.
         """
         return self.pipes[-1].transform_modifies
 
@@ -62,7 +62,7 @@ class Pipeline(pipeline.pipe.Pipe):
         """
         Parameters assigned to fit of each pipe.
 
-        :return: a dictionary with the pipe's name and their respective :attr:`~pipeline.pipe.Pipe.fitted_parameters`.
+        :return: a dictionary with the pipe's name and their respective :attr:`~schemaflow.pipe.Pipe.fitted_parameters`.
         """
         fitted_parameters = {}
         for name, pipe in self.pipes.items():
@@ -72,7 +72,7 @@ class Pipeline(pipeline.pipe.Pipe):
     @property
     def requirements(self):
         """
-        :return: the union of all :attr:`~pipeline.pipe.Pipe.requirements` of all pipes in the pipeline.
+        :return: the union of all :attr:`~schemaflow.pipe.Pipe.requirements` of all pipes in the schemaflow.
         """
         requirements = set()
         for pipe in self.pipes:

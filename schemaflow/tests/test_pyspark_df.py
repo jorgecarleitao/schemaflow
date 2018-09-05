@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pyspark
 
-from pipeline.types import PySparkDataFrame
+from schemaflow.types import PySparkDataFrame
 
 
 class PySparkTestCase(unittest.TestCase):

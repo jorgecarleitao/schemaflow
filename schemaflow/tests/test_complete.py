@@ -2,10 +2,12 @@ import unittest
 
 import numpy as np
 
-from pipeline import pipe, types, exceptions
+from schemaflow import pipe, types, exceptions
 
 
 class Pipe(pipe.Pipe):
+    requirements = {'sklearn'}
+
     # variables required by fit (supervised learning)
     fit_data = {
         # (arbitrary items, arbitrary features)

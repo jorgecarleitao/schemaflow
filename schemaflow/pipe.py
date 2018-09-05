@@ -1,7 +1,7 @@
 import importlib.util
 
-import pipeline.types
-import pipeline.exceptions as _exceptions
+import schemaflow.types
+import schemaflow.exceptions as _exceptions
 
 
 class Pipe:
@@ -27,7 +27,7 @@ class Pipe:
 
     - a set of :attr:`requirements` (a set of package names, e.g. ``{'pandas'}``) of the transformation
 
-    All :attr:`transform_modifies` and :attr:`fit_data` have a :class:`~pipeline.types.Type` that can
+    All :attr:`transform_modifies` and :attr:`fit_data` have a :class:`~schemaflow.types.Type` that can
     be used to check that the Pipe's input is consistent, with
 
         - :meth:`check_fit`
@@ -38,17 +38,17 @@ class Pipe:
         - :meth:`check_requirements`
 
     The rational is that you can run ``check_*`` with access only to the data's schema.
-    This is specially important when the pipeline is an expensive operation.
+    This is specially important when the schemaflow is an expensive operation.
     """
     #: set of packages required by the Pipe.
     requirements = set()
 
     #: the data schema required in :meth:`~fit`;
-    #: a dictionary ``str``: :class:`~pipeline.types.Type`.
+    #: a dictionary ``str``: :class:`~schemaflow.types.Type`.
     fit_data = {}
 
     #: the data schema required in :meth:`~transform`;
-    #: a dictionary ``str``: :class:`~pipeline.type.Type`.
+    #: a dictionary ``str``: :class:`~schemaflow.type.Type`.
     transform_data = {}
 
     #: parameters' schema passed to :meth:`~fit`
@@ -71,8 +71,8 @@ class Pipe:
 
     @staticmethod
     def _get_type(type):
-        if not isinstance(type, pipeline.types.Type):
-            type = pipeline.types._LiteralType(type)
+        if not isinstance(type, schemaflow.types.Type):
+            type = schemaflow.types._LiteralType(type)
         return type
 
     def check_requirements(self):
@@ -103,7 +103,7 @@ class Pipe:
 
         :param data:
         :param parameters:
-        :return: a list of (subclasses of) :class:`~pipeline.exceptions.PipelineError` with all missing arguments.
+        :return: a list of (subclasses of) :class:`~schemaflow.exceptions.SchemaFlowError` with all missing arguments.
         """
         if parameters is None:
             parameters = {}
@@ -149,7 +149,7 @@ class Pipe:
         Checks that a given data has a valid schema to be used in :meth:`transform`.
 
         :param data:
-        :return: a list of (subclasses of) :class:`pipeline.exceptions.PipelineError` with all missing arguments.
+        :return: a list of (subclasses of) :class:`schemaflow.exceptions.SchemaFlowError` with all missing arguments.
         """
         exceptions = []
 
@@ -171,8 +171,8 @@ class Pipe:
 
     def apply_transform_schema(self, data):
         for key, value in self.transform_modifies.items():
-            if not isinstance(value, pipeline.types.Type):
-                value = pipeline.types._LiteralType(value)
+            if not isinstance(value, schemaflow.types.Type):
+                value = schemaflow.types._LiteralType(value)
             data[key] = value
         return data
 
