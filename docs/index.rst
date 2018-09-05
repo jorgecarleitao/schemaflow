@@ -107,6 +107,27 @@ Without reading nor executing ``fit`` and ``transform``, we know how ``data`` wi
 This allows to check whether a ``Pipeline`` is consistent **without** executing
 ``fit`` or ``transform`` of *any* pipe.
 
+Specifically, you can execute the pipe using
+
+.. code-block:: python
+
+    p = MyPipe()
+    p.fit(train_data, {'gamma': 1.0})
+    p.transform(test_data)  # modifies `test_data`
+
+and check whether the data format that you pass is consistent using
+
+.. code-block:: python
+
+    p = MyPipe()
+    exceptions_fit = p.check_fit({'x': 1}, {'gamma': 1.0})
+    assert len(exceptions_fit) > 0
+
+    exceptions_transform = p.check_transform({'x': 1}, {'gamma': 1.0})
+    assert len(exceptions_transform) > 0
+
+which does not execute ``fit`` nor ``transform``.
+
 Pipeline
 --------
 

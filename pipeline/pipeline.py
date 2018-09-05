@@ -80,9 +80,6 @@ class Pipeline(pipeline.pipe.Pipe):
         return requirements
 
     def check_transform(self, data: dict=None):
-        if data is None:
-            data = {}
-
         errors = []
         for key, pipe in self.pipes.items():
             errors += pipe.check_transform(data)
@@ -90,8 +87,6 @@ class Pipeline(pipeline.pipe.Pipe):
         return errors
 
     def check_fit(self, data: dict, parameters: dict=None):
-        if data is None:
-            data = {}
         if parameters is None:
             parameters = {}
 

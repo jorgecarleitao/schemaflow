@@ -1,12 +1,12 @@
-# Data Science Pipeline
+# Dataflow
 
-This is a package to write systematic pipelines for data science
-and data engineering in Python. Thanks for checking it out.
+This is a a package to write data pipelines for data science systematically in Python.
+Thanks for checking it out.
 
 ## The problem that this package solves
 
-A major challenge in creating a robust pipeline is guaranteeing interoperability between
-pipes. I.e. how do we guarantee that the pipe that someone wrote is compatible
+A major challenge in creating a robust data pipeline is guaranteeing interoperability between
+pipes: how do we guarantee that the pipe that someone wrote is compatible
 with my pipeline *without* running the whole pipeline multiple times until I get it right?
 
 ## The solution this package adopts
@@ -33,10 +33,5 @@ on each pipe and therefore the whole pipeline.
 
 ## Use cases
 
-1. You have a hadoop cluster with csv/etc., use PySpark to process them
-into and fit a model. There are multiple processing steps developed by many people.
-
-## Caveats
-
-Note that while this does not solve all problems (e.g. Lasso predict requires the same 
-number of fitted and transformed features), it solves an important set of them.
+You have a hadoop cluster with csv/etc., use PySpark to process them
+and fit a model. There are multiple processing steps developed by many people.
