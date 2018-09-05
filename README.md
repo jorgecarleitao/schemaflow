@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/jorgecarleitao/schemaflow.svg?branch=master)](https://travis-ci.org/jorgecarleitao/schemaflow)
+[![Coverage Status](https://coveralls.io/repos/github/jorgecarleitao/schemaflow/badge.svg)](https://coveralls.io/github/jorgecarleitao/schemaflow)
+[![Documentation Status](https://readthedocs.org/projects/schemaflow/badge/?version=latest)](https://schemaflow.readthedocs.io/en/latest/?badge=latest)
+
 # SchemaFlow
 
 This is a a package to write data pipelines for data science systematically in Python.
