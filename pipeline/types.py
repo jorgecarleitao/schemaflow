@@ -202,13 +202,13 @@ class Array(_Container):
             items_type = numpy.float64
         super().__init__(_LiteralType(items_type))
         assert isinstance(shape, (type(None), tuple))
-        self._shape = shape
+        self.shape = shape
 
     def _check_as_type(self, instance):
         exceptions = super()._check_as_type(instance)
         if not exceptions:
-            if not self._is_valid_shape(instance._shape):
-                exceptions.append(_exceptions.WrongShape(self._shape, instance._shape))
+            if not self._is_valid_shape(instance.shape):
+                exceptions.append(_exceptions.WrongShape(self.shape, instance.shape))
         return exceptions
 
     def _check_as_instance(self, instance: object):
@@ -217,16 +217,16 @@ class Array(_Container):
             assert hasattr(instance, 'dtype')
             if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
                 if not self._is_valid_shape(instance.shape):
-                    exceptions.append(_exceptions.WrongShape(self._shape, instance.shape))
+                    exceptions.append(_exceptions.WrongShape(self.shape, instance.shape))
             else:
                 exceptions.append(_exceptions.WrongType(self._items_type.type, instance.dtype))
         return exceptions
 
     def _is_valid_shape(self, shape):
         if shape is not None:
-            if len(shape) != len(self._shape):
+            if len(shape) != len(self.shape):
                 return False
-            for required_d, d in zip(self._shape, shape):
+            for required_d, d in zip(self.shape, shape):
                 if required_d is not None and d != required_d:
                     return False
         return True
