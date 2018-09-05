@@ -123,10 +123,26 @@ and check whether the data format that you pass is consistent using
     exceptions_fit = p.check_fit({'x': 1}, {'gamma': 1.0})
     assert len(exceptions_fit) > 0
 
-    exceptions_transform = p.check_transform({'x': 1}, {'gamma': 1.0})
+    exceptions_transform = p.check_transform({'x': 1})
     assert len(exceptions_transform) > 0
 
 which does not execute ``fit`` nor ``transform``.
+
+When we have multiple pipes (which themselves can be pipelines), a good overview of how
+the data schema flows is key. **Schemaflow** helps you in this task:
+
+.. code-block:: python
+
+    p = schemaflow.pipeline.Pipeline([
+        ('fix_ids', PipeA()),
+        ('join_tables_with_fix', PipeB()),
+        ('featurize', Featurize1_Pipeline()),
+        ('model', Model1_Pipeline()),
+        ('export_metrics', Export_results_PDF_Pipeline()),
+        ('export_metrics', PushResultsToCache())
+    ])
+
+    print(p.transform_modifies)
 
 Pipeline
 --------
