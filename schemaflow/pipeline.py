@@ -41,14 +41,14 @@ class Pipeline(schemaflow.pipe.Pipe):
         """
         The :attr:`~schemaflow.pipe.Pipe.fit_data` of the first pipe of the schemaflow.
         """
-        return self.pipes[0].fit_data
+        return list(self.pipes.values())[0].fit_data
 
     @property
     def transform_data(self):
         """
         The :attr:`~schemaflow.pipe.Pipe.transform_data` of the first pipe of the schemaflow.
         """
-        return self.pipes[0].transform_data
+        return list(self.pipes.values())[0].transform_data
 
     @property
     def transform_modifies(self):

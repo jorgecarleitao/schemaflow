@@ -32,6 +32,9 @@ class Type:
         else:
             return self._check_as_instance(instance)
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
 
 class _LiteralType(Type):
     """

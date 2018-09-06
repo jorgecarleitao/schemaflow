@@ -50,6 +50,8 @@ class TestPipeline(unittest.TestCase):
 
         self.assertEqual(p.check_fit({'x': ['1']}), [])
         self.assertEqual(p.check_transform({'x': ['1']}), [])
+        self.assertEqual(p.fitted_parameters, {'0': {}, '1': {'mean': float, 'var': float}})
+        self.assertEqual(p.transform_data, {'x': types.List(str)})
 
         p.fit({'x': ['1', '2', '3']})
         result = p.transform({'x': ['1', '2', '3']})
