@@ -7,8 +7,8 @@ class Pipeline(schemaflow.pipe.Pipe):
     """
     A linear sequence of :class:`~schemaflow.pipe.Pipe`'s that operate in sequence.
 
-    :class:`~schemaflow.schemaflow.Pipeline` is a :class:`~schemaflow.pipe.Pipe` and can be part of
-    another :class:`~schemaflow.schemaflow.Pipeline`.
+    :class:`~schemaflow.pipeline.Pipeline` is a :class:`~schemaflow.pipe.Pipe` and can be part of
+    another :class:`~schemaflow.pipeline.Pipeline`.
 
     :param pipes: a ``list`` or ``OrderedDict`` of :attr:`~schemaflow.pipe.Pipe`.
         If passed as a list, you can either pass pipes or tuples ``(name, Pipe)``.
