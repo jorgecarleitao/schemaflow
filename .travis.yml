@@ -4,6 +4,10 @@ python:
 
 install:
   - pip install -r requirements_tests.txt
+  - pip install coverage coveralls
 
 script:
-  - python -m unittest discover
+  - coverage run --source schemaflow -m unittest discover
+
+after_success:
+    - coveralls

@@ -3,5 +3,3 @@ scikit-learn
 scipy  # dependency of sklearn
 pandas
 pyspark
-
-coverage
