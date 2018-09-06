@@ -1,3 +1,5 @@
+import datetime
+
 import schemaflow.exceptions as _exceptions
 
 
@@ -130,7 +132,10 @@ class PySparkDataFrame(_DataFrame):
         mapping = {
             pyspark.sql.types.LongType: _LiteralType(int),
             pyspark.sql.types.DoubleType: _LiteralType(float),
-            pyspark.sql.types.StringType: _LiteralType(numpy.dtype('O'))
+            pyspark.sql.types.BooleanType: _LiteralType(bool),
+            pyspark.sql.types.StringType: _LiteralType(numpy.dtype('O')),
+            pyspark.sql.types.DateType: _LiteralType(datetime.date),
+            pyspark.sql.types.TimestampType: _LiteralType(datetime.datetime),
         }
         return dict((f.name, mapping[type(f.dataType)]) for f in instance.schema.fields)
 
