@@ -1,15 +1,23 @@
 import os
-from setuptools import setup, find_packages
-
+import setuptools
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.md')).read()
 
-setup(
+with open(os.path.join(here, 'README.md'), 'r') as fh:
+    long_description = fh.read()
+
+setuptools.setup(
     name='schemaflow',
     author='Jorge C. Leitao',
     version='0.1.0',
     description='a package to write data pipelines for data science systematically',
-    long_description=README,
-    packages=find_packages(exclude='tests'),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/jorgecarleitao/schemaflow",
+    packages=setuptools.find_packages(exclude='tests'),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )
