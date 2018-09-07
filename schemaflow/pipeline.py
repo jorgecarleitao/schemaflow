@@ -15,26 +15,24 @@ class Pipeline(schemaflow.pipe.Pipe):
     """
     def __init__(self, pipes):
         super().__init__()
-        assert len(pipes) > 0
-
         if isinstance(pipes, collections.OrderedDict):
             self.pipes = pipes
             return
         elif not isinstance(pipes, list):
             raise TypeError('Pipes must a list or OrderedDict')
 
+        assert len(pipes) > 0
         #: An ``OrderedDict`` whose keys are the pipe's names or ``str(index)`` where ``index`` is the pipe's
         #: position in the sequence and the values are :attr:`~schemaflow.pipe.Pipe`'s.
         self.pipes = collections.OrderedDict()
         for i, item in enumerate(pipes):
-            if isinstance(item, tuple):
-                assert len(item) == 2 and isinstance(item[1], schemaflow.pipe.Pipe) and \
-                       isinstance(item[0], str) and '/' not in item[0]
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], schemaflow.pipe.Pipe) and \
+                       isinstance(item[0], str):
                 self.pipes[item[0]] = item[1]
             elif isinstance(item, schemaflow.pipe.Pipe):
                 self.pipes[str(i)] = item
             else:
-                raise TypeError('Items must be pipes or a tuple with `(str, Pipe)`')
+                raise TypeError('Items must be pipes or 2-element tuples of the form `(str, Pipe)`')
 
     @property
     def fit_data(self):

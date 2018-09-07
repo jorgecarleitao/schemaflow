@@ -1,4 +1,5 @@
 import unittest
+import collections
 
 from schemaflow.pipeline import Pipeline
 from schemaflow.pipe import Pipe
@@ -91,6 +92,18 @@ class TestPipeline(unittest.TestCase):
 
         # std([1,2,3]) == 0.816496580927726
         self.assertEqual(result['x'], [-1.2247448713915887, 0.0, 1.2247448713915887])
+
+    def test_custom_init(self):
+        pipes = collections.OrderedDict([('1', Pipe1()), ('2', Pipe2())])
+        p = Pipeline(pipes)
+
+        self.assertEqual(p.pipes, pipes)
+
+        with self.assertRaises(TypeError):
+            Pipeline([('1', 1)])
+
+        with self.assertRaises(TypeError):
+            Pipeline(Pipe1())
 
     def test_two_transform_data(self):
         # P1 needs 'x', P2 needs 'x1'
