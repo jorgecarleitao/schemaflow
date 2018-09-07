@@ -45,7 +45,7 @@ class _LiteralType(Type):
         self._base_type = base_type
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self._base_type)
+        return 'L(%s)' % self._base_type
 
     @property
     def type(self):
@@ -71,10 +71,19 @@ class _DataFrame(Type):
         """
         :param schema: dictionary of `(column_name, type)`.
         """
-        self._schema = schema.copy()
-        for column, base_type in self._schema.items():
+        self.schema = schema.copy()
+        for column, base_type in self.schema.items():
             if not isinstance(base_type, Type):
-                self._schema[column] = _LiteralType(base_type)
+                self.schema[column] = _LiteralType(base_type)
+
+    def __getitem__(self, key):
+        return self.schema[key]
+
+    def __setitem__(self, key, value):
+        self.schema[key] = value
+
+    def __delitem__(self, key):
+        del self.schema[key]
 
     @staticmethod
     def _own_type():
@@ -92,12 +101,12 @@ class _DataFrame(Type):
 
     def _check_schema(self, schema):
         exceptions = []
-        for column in self._schema:
+        for column in self.schema:
             if column not in schema:
                 exceptions.append(_exceptions.WrongSchema(column, set(schema.keys())))
             else:
                 column_type = schema[column].type
-                expected_type = self._schema[column].type
+                expected_type = self.schema[column].type
                 if expected_type != column_type:
                     exceptions.append(_exceptions.WrongType(
                         expected_type, column_type, 'column \'%s\'' % column))
@@ -106,7 +115,7 @@ class _DataFrame(Type):
     def _check_as_type(self, instance):
         exceptions = super()._check_as_type(instance)
         if not exceptions:
-            exceptions += self._check_schema(instance._schema)
+            exceptions += self._check_schema(instance.schema)
         return exceptions
 
     def _check_as_instance(self, instance: object):
@@ -115,6 +124,9 @@ class _DataFrame(Type):
         if not isinstance(instance, expected_type):
             return [_exceptions.WrongType(expected_type, type(instance))]
         return self._check_schema(self._get_schema(instance))
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.schema)
 
 
 class PySparkDataFrame(_DataFrame):

@@ -113,10 +113,14 @@ class TestPipeline(unittest.TestCase):
 
         self.assertEqual(p.fit_data, {'x': types.List(str), 'x1': types.List(str)})
 
+        self.assertEqual(p.transform_modifies, {'x': types.List(float)})
+
     def test_two_fit_data(self):
         # P4 fit-needs 'x1', P2 fit-needs 'x' (float) => fit_data needs both on its first type-occurrence
         p = Pipeline([Pipe1(), Pipe4(), Pipe2()])
 
+        self.assertEqual(p.transform_data, {'x': types.List(str)})
+
         self.assertEqual(p.fit_data, {'x': types.List(str), 'x1': types.List(float)})
 
-        self.assertEqual(p.transform_data, {'x': types.List(str)})
+        self.assertEqual(p.transform_modifies, {'x': types.List(float)})
