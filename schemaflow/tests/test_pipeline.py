@@ -30,6 +30,8 @@ class Pipe2(Pipe):
 
     fitted_parameters = {'mean': float, 'var': float}
 
+    fit_parameters = {'unused': float}
+
     transform_modifies = {
         'x': types.List(float),
     }
@@ -69,13 +71,22 @@ class TestPipeline(unittest.TestCase):
     def test_basic(self):
         p = Pipeline([Pipe1(), Pipe2()])
 
-        self.assertEqual(p.check_fit({'x': ['1']}), [])
+        self.assertEqual(p.check_fit({'x': ['1']}, {'1': {'unused': 1.0}}), [])
         self.assertEqual(p.check_transform({'x': ['1']}), [])
         self.assertEqual(p.fitted_parameters, {'0': {}, '1': {'mean': float, 'var': float}})
         self.assertEqual(p.transform_data, {'x': types.List(str)})
         self.assertEqual(p.fit_data, {'x': types.List(str)})
 
-        p.fit({'x': ['1', '2', '3']})
+        p.fit({'x': ['1', '2', '3']}, {'1': {'unused': 1.0}})
+        result = p.transform({'x': ['1', '2', '3']})
+
+        # std([1,2,3]) == 0.816496580927726
+        self.assertEqual(result['x'], [-1.2247448713915887, 0.0, 1.2247448713915887])
+
+    def test_custom_parameters(self):
+        p = Pipeline([('1', Pipe1()), ('2', Pipe2())])
+
+        p.fit({'x': ['1', '2', '3']}, {'2': {'unused': 1.0}})
         result = p.transform({'x': ['1', '2', '3']})
 
         # std([1,2,3]) == 0.816496580927726

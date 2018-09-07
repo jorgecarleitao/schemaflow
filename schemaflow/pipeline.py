@@ -120,7 +120,7 @@ class Pipeline(schemaflow.pipe.Pipe):
             if key in parameters:
                 errors += pipe.check_fit(data, parameters[key])
             else:
-                errors += pipe.check_fit(data, parameters)
+                errors += pipe.check_fit(data)
             data = pipe.apply_transform_schema(data)
         return errors
 
