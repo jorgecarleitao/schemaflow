@@ -41,14 +41,39 @@ class Pipeline(schemaflow.pipe.Pipe):
         """
         The :attr:`~schemaflow.pipe.Pipe.fit_data` of the first pipe of the schemaflow.
         """
-        return list(self.pipes.values())[0].fit_data
+        fit_data = {}
+        data = {}
+        for key, pipe in self.pipes.items():
+            # not in data => a previous pipe already added this key
+            # not in transform_data => previous pipe already required this key
+            if pipe.fit_data:
+                required_data = pipe.fit_data
+            else:
+                required_data = pipe.transform_data
+
+            new_keys = dict((key, type) for key, type in required_data.items()
+                            if key not in data and key not in fit_data)
+            fit_data.update(new_keys)
+            data = pipe.apply_transform_schema(data)
+
+        return fit_data
 
     @property
     def transform_data(self):
         """
         The :attr:`~schemaflow.pipe.Pipe.transform_data` of the first pipe of the schemaflow.
         """
-        return list(self.pipes.values())[0].transform_data
+        transform_data = {}
+        data = {}
+        for key, pipe in self.pipes.items():
+            # not in data => a previous pipe already added this key
+            # not in transform_data => previous pipe already required this key
+            new_keys = dict((key, type) for key, type in pipe.transform_data.items()
+                            if key not in data and key not in transform_data)
+            transform_data.update(new_keys)
+            data = pipe.apply_transform_schema(data)
+
+        return transform_data
 
     @property
     def transform_modifies(self):
