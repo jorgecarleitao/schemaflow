@@ -19,9 +19,8 @@ class WrongSchema(SchemaFlowError):
 
     def __str__(self):
         return 'Missing arguments %s:'\
-                '\nRequired arguments: %s\nPassed arguments:   %s' % (
-            ' '.join(self.locations),
-            self.expected_columns, self.passed_columns)
+                '\nRequired arguments: %s\nPassed arguments:   %s' % \
+               (' '.join(self.locations), self.expected_columns, self.passed_columns)
 
 
 class WrongParameter(WrongSchema):
@@ -30,9 +29,8 @@ class WrongParameter(WrongSchema):
     """
     def __str__(self):
         return 'Incompatible arguments %s:'\
-                '\nExpected arguments: %s\nPassed arguments:   %s' % (
-            ' '.join(self.locations),
-            self.expected_columns, self.passed_columns)
+                '\nExpected arguments: %s\nPassed arguments:   %s' % \
+               (' '.join(self.locations), self.expected_columns, self.passed_columns)
 
 
 class WrongType(SchemaFlowError):
@@ -46,9 +44,8 @@ class WrongType(SchemaFlowError):
 
     def __str__(self):
         return 'Wrong type %s:'\
-                '\nRequired type: %s\nPassed type:   %s' % (
-            ' '.join(self.locations),
-            self.expected_type, self.expected_type)
+                '\nRequired type: %s\nPassed type:   %s' % \
+               (' '.join(self.locations), self.expected_type, self.expected_type)
 
 
 class WrongShape(SchemaFlowError):
@@ -62,6 +59,5 @@ class WrongShape(SchemaFlowError):
 
     def __str__(self):
         return 'Wrong shape %s:'\
-                '\nRequired shape: %s\nPassed shape:   %s' % (
-            ' '.join(self.locations),
-            self.expected_shape, self.shape)
+                '\nRequired shape: %s\nPassed shape:   %s' % \
+               (' '.join(self.locations), self.expected_shape, self.shape)
