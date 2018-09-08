@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 
 from schemaflow.types import Array
+from schemaflow import exceptions
 
 
 class TestArray(unittest.TestCase):
@@ -70,3 +71,9 @@ class TestArray(unittest.TestCase):
         instance = np.array([object, 2.0]).dtype
         array_type = Array(float, shape=(None,))
         self.assertEqual(len(array_type.check_schema(instance)), 1)
+
+        instance = Array(float, shape=(None, 1))
+        array_type = Array(np.float64, shape=(1,))
+        with self.assertRaises(exceptions.WrongShape) as e:
+            array_type.check_schema(instance, True)
+        self.assertIn('Wrong shape', str(e.exception))
