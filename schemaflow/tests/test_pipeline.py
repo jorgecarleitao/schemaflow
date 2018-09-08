@@ -4,6 +4,7 @@ import collections
 from schemaflow.pipeline import Pipeline
 from schemaflow.pipe import Pipe
 from schemaflow import types
+from schemaflow import exceptions
 
 
 class Pipe1(Pipe):
@@ -114,6 +115,22 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(p.fit_data, {'x': types.List(str), 'x1': types.List(str)})
 
         self.assertEqual(p.transform_modifies, {'x': types.List(float)})
+
+    def test_transform_schema(self):
+        # P1 needs 'x', P2 needs 'x1'
+        p = Pipeline([Pipe1(), Pipe3(), Pipe2()])
+
+        # 'x1' is passed along without modification
+        self.assertEqual(p.transform_schema({'x': types.List(str), 'x1': types.List(str)}),
+                         {'x': types.List(float), 'x1': types.List(str)})
+
+        with self.assertRaises(exceptions.WrongSchema) as e:
+            p.transform_schema({'y': types.List(str)})
+        self.assertIn('in transform in step 0 of Pipeline', str(e.exception))
+
+        with self.assertRaises(exceptions.WrongSchema) as e:
+            p.transform_schema({'x': types.List(str)})
+        self.assertIn('in transform in step 1 of Pipeline', str(e.exception))
 
     def test_two_fit_data(self):
         # P4 fit-needs 'x1', P2 fit-needs 'x' (float) => fit_data needs both on its first type-occurrence

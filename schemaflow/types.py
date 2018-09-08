@@ -12,25 +12,29 @@ class Type:
     """
     requirements = {}  #: set of packages required for this type to be usable.
 
-    def _check_as_instance(self, instance: object):
+    def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
 
-    def _check_as_type(self, instance):
+    def _check_as_type(self, instance, raise_: bool):
         if type(instance) != type(self):
-            return [_exceptions.WrongType(instance, self)]
+            exception = _exceptions.WrongType(instance, self)
+            if raise_:
+                raise exception
+            return [exception]
         return []
 
-    def check_schema(self, instance: object):
+    def check_schema(self, instance: object, raise_: bool=False):
         """
         Checks that the instance has the correct type and schema (composite types).
 
         :param instance: a datum in either its representation form or on its schema form.
+        :param raise_:
         :return: a list of exceptions
         """
         if isinstance(instance, Type):
-            return self._check_as_type(instance)
+            return self._check_as_type(instance, raise_)
         else:
-            return self._check_as_instance(instance)
+            return self._check_as_instance(instance, raise_)
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -51,15 +55,21 @@ class _LiteralType(Type):
     def type(self):
         return self._base_type
 
-    def _check_as_instance(self, instance: object):
+    def _check_as_instance(self, instance: object, raise_: bool):
         if not isinstance(instance, self._base_type):
-            return [_exceptions.WrongType(self._base_type, type(instance))]
+            exception = _exceptions.WrongType(self._base_type, type(instance))
+            if raise_:
+                raise exception
+            return [exception]
         return []
 
-    def _check_as_type(self, instance):
-        exceptions = super()._check_as_type(instance)
+    def _check_as_type(self, instance, raise_: bool):
+        exceptions = super()._check_as_type(instance, raise_)
         if not exceptions and instance._base_type != self._base_type:
-            exceptions.append(_exceptions.WrongType(instance, self))
+            exception = _exceptions.WrongType(instance, self)
+            if raise_:
+                raise exception
+            exceptions.append(exception)
         return exceptions
 
 
@@ -99,31 +109,40 @@ class _DataFrame(Type):
         """
         raise NotImplementedError
 
-    def _check_schema(self, schema):
+    def _check_schema(self, schema, raise_: bool):
         exceptions = []
         for column in self.schema:
             if column not in schema:
-                exceptions.append(_exceptions.WrongSchema(column, set(schema.keys())))
+                exception = _exceptions.WrongSchema(column, set(schema.keys()))
+                if raise_:
+                    raise exception
+                exceptions.append(exception)
             else:
                 column_type = schema[column].type
                 expected_type = self.schema[column].type
                 if expected_type != column_type:
-                    exceptions.append(_exceptions.WrongType(
-                        expected_type, column_type, 'column \'%s\'' % column))
+                    exception = _exceptions.WrongType(
+                        expected_type, column_type, 'column \'%s\'' % column)
+                    if raise_:
+                        raise exception
+                    exceptions.append(exception)
         return exceptions
 
-    def _check_as_type(self, instance):
-        exceptions = super()._check_as_type(instance)
+    def _check_as_type(self, instance, raise_: bool):
+        exceptions = super()._check_as_type(instance, raise_)
         if not exceptions:
-            exceptions += self._check_schema(instance.schema)
+            exceptions += self._check_schema(instance.schema, raise_)
         return exceptions
 
-    def _check_as_instance(self, instance: object):
+    def _check_as_instance(self, instance: object, raise_: bool):
         expected_type = self._own_type()
 
         if not isinstance(instance, expected_type):
-            return [_exceptions.WrongType(expected_type, type(instance))]
-        return self._check_schema(self._get_schema(instance))
+            exception = _exceptions.WrongType(expected_type, type(instance))
+            if raise_:
+                raise exception
+            return [exception]
+        return self._check_schema(self._get_schema(instance), raise_)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self.schema)
@@ -182,22 +201,25 @@ class _Container(Type):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._items_type.type.__name__)
 
-    def _check_as_type(self, instance):
-        exceptions = super()._check_as_type(instance)
+    def _check_as_type(self, instance, raise_: bool):
+        exceptions = super()._check_as_type(instance, raise_)
         if not exceptions and self._items_type.type != instance._items_type.type:
-            exceptions += [_exceptions.WrongType(self, instance)]
+            exception = _exceptions.WrongType(self, instance)
+            if raise_:
+                raise exception
+            exceptions += [exception]
         return exceptions
 
-    def _check_as_instance(self, instance: object):
+    def _check_as_instance(self, instance: object, raise_: bool):
         # the instance is not a type, we do type checking
-        exceptions = self._own_type.check_schema(instance)
+        exceptions = self._own_type.check_schema(instance, raise_)
         if exceptions:
             return exceptions
 
         exceptions = []
         if not exceptions:
             for i, item in enumerate(instance):
-                exceptions += self._items_type.check_schema(item)
+                exceptions += self._items_type.check_schema(item, raise_)
         return exceptions
 
 
@@ -224,22 +246,31 @@ class Array(_Container):
         assert isinstance(shape, (type(None), tuple))
         self.shape = shape
 
-    def _check_as_type(self, instance):
-        exceptions = super()._check_as_type(instance)
+    def _check_as_type(self, instance, raise_: bool):
+        exceptions = super()._check_as_type(instance, raise_)
         if not exceptions:
             if not self._is_valid_shape(instance.shape):
-                exceptions.append(_exceptions.WrongShape(self.shape, instance.shape))
+                exception = _exceptions.WrongShape(self.shape, instance.shape)
+                if raise_:
+                    raise exception
+                exceptions.append(exception)
         return exceptions
 
-    def _check_as_instance(self, instance: object):
-        exceptions = self._own_type.check_schema(instance)
+    def _check_as_instance(self, instance: object, raise_: bool):
+        exceptions = self._own_type.check_schema(instance, raise_)
         if not exceptions:
             assert hasattr(instance, 'dtype')
             if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
                 if not self._is_valid_shape(instance.shape):
-                    exceptions.append(_exceptions.WrongShape(self.shape, instance.shape))
+                    exception = _exceptions.WrongShape(self.shape, instance.shape)
+                    if raise_:
+                        raise exception
+                    exceptions.append(exception)
             else:
-                exceptions.append(_exceptions.WrongType(self._items_type.type, instance.dtype))
+                exception = _exceptions.WrongType(self._items_type.type, instance.dtype)
+                if raise_:
+                    raise exception
+                exceptions.append(exception)
         return exceptions
 
     def _is_valid_shape(self, shape):

@@ -3,7 +3,7 @@ import schemaflow.types
 
 class Operation:
     """
-    Declares a generic operation to the schema
+    Declares a generic operation to the schema, used in :attr:`~schemaflow.pipe.Pipe.transform_modifies`.
     """
     def transform(self, key, schema):
         return schema
@@ -12,6 +12,8 @@ class Operation:
 class Set(Operation):
     """
     Declares an operation that sets a new schema key.
+
+    Not using an operation to define
     """
     def __init__(self, value_type):
         if not isinstance(value_type, schemaflow.types._LiteralType):

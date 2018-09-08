@@ -2,7 +2,10 @@ class SchemaFlowError(Exception):
     """
     The base exception of Pipeline
     """
-    pass
+    def __init__(self, locations: list=None):
+        if locations is None:
+            locations = []
+        self.locations = locations
 
 
 class MissingRequirement(Exception):
@@ -13,45 +16,60 @@ class MissingRequirement(Exception):
         self.requirement = requirement
 
 
-class WrongData(SchemaFlowError):
-    """
-    :class:`~schemaflow.exceptions.SchemaFlowError` raised when the data passed to `fit` or `transform` miss arguments.
-    """
-    pass
-
-
-class WrongParameter(SchemaFlowError):
-    """
-    :class:`~schemaflow.exceptions.SchemaFlowError` raised when an unexpected parameter is passed to `fit`.
-    """
-    pass
-
-
 class WrongSchema(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the schema of a datum is wrong (e.g. wrong shape)
     """
-    def __init__(self, expected_column, columns, location: str=''):
-        self.expected_column = expected_column
-        self.columns = columns
-        self.location = location
+    def __init__(self, expected_columns, passed_columns, locations: list=None):
+        super().__init__(locations)
+        self.expected_columns = expected_columns
+        self.passed_columns = passed_columns
+
+    def __str__(self):
+        return 'Missing arguments %s:'\
+                '\nRequired arguments: %s\nPassed arguments:   %s' % (
+            ' '.join(self.locations),
+            self.expected_columns, self.passed_columns)
+
+
+class WrongParameter(WrongSchema):
+    """
+    :class:`~schemaflow.exceptions.SchemaFlowError` raised when unexpected parameters are passed to `fit`.
+    """
+    def __str__(self):
+        return 'Incompatible arguments %s:'\
+                '\nExpected arguments: %s\nPassed arguments:   %s' % (
+            ' '.join(self.locations),
+            self.expected_columns, self.passed_columns)
 
 
 class WrongType(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the type of the datum is wrong
     """
-    def __init__(self, expected_type, base_type, location: str=''):
+    def __init__(self, expected_type, base_type, locations: list=None):
+        super().__init__(locations)
         self.expected_type = expected_type
         self.base_type = base_type
-        self.location = location
+
+    def __str__(self):
+        return 'Wrong type %s:'\
+                '\nRequired type: %s\nPassed type:   %s' % (
+            ' '.join(self.locations),
+            self.expected_type, self.expected_type)
 
 
 class WrongShape(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the shape of the datum is wrong
     """
-    def __init__(self, expected_shape, shape, location: str=''):
+    def __init__(self, expected_shape, shape, locations: list=None):
+        super().__init__(locations)
         self.expected_shape = expected_shape
         self.shape = shape
-        self.location = location
+
+    def __str__(self):
+        return 'Wrong shape %s:'\
+                '\nRequired shape: %s\nPassed shape:   %s' % (
+            ' '.join(self.locations),
+            self.expected_shape, self.shape)

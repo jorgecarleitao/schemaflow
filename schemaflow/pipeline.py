@@ -1,6 +1,7 @@
 import collections
 
 import schemaflow.pipe
+import schemaflow.exceptions as _exceptions
 
 
 class Pipeline(schemaflow.pipe.Pipe):
@@ -37,7 +38,7 @@ class Pipeline(schemaflow.pipe.Pipe):
     @property
     def fit_data(self):
         """
-        The :attr:`~schemaflow.pipe.Pipe.fit_data` of the first pipe of the schemaflow.
+        The data schema required in :meth:`~fit` of the whole Pipeline.
         """
         fit_data = {}
         data = {}
@@ -52,14 +53,14 @@ class Pipeline(schemaflow.pipe.Pipe):
             new_keys = dict((key, type) for key, type in required_data.items()
                             if key not in data and key not in fit_data)
             fit_data.update(new_keys)
-            data = pipe.transform_schema(data)
+            data = pipe._transform_schema(data)
 
         return fit_data
 
     @property
     def transform_data(self):
         """
-        The :attr:`~schemaflow.pipe.Pipe.transform_data` of the first pipe of the schemaflow.
+        The data schema required in :meth:`~transform` of the whole Pipeline.
         """
         transform_data = {}
         data = {}
@@ -69,14 +70,14 @@ class Pipeline(schemaflow.pipe.Pipe):
             new_keys = dict((key, type) for key, type in pipe.transform_data.items()
                             if key not in data and key not in transform_data)
             transform_data.update(new_keys)
-            data = pipe.transform_schema(data)
+            data = pipe._transform_schema(data)
 
         return transform_data
 
     @property
     def transform_modifies(self):
         """
-        All the modifications that this Pipeline applies during ``transform``.
+        All the modifications that this Pipeline apply during ``transform``.
 
         When a key is modified more than once, changes are appended as a list.
         """
@@ -115,23 +116,23 @@ class Pipeline(schemaflow.pipe.Pipe):
             requirements = requirements.union(pipe.requirements)
         return requirements
 
-    def check_transform(self, data: dict=None):
+    def check_transform(self, data: dict=None, raise_: bool=False):
         errors = []
         for key, pipe in self.pipes.items():
-            errors += pipe.check_transform(data)
+            errors += pipe.check_transform(data, raise_)
             data = pipe.transform_schema(data)
         return errors
 
-    def check_fit(self, data: dict, parameters: dict=None):
+    def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
         if parameters is None:
             parameters = {}
 
         errors = []
         for key, pipe in self.pipes.items():
             if key in parameters:
-                errors += pipe.check_fit(data, parameters[key])
+                errors += pipe.check_fit(data, parameters[key], raise_)
             else:
-                errors += pipe.check_fit(data)
+                errors += pipe.check_fit(data, {}, raise_)
             data = pipe.transform_schema(data)
         return errors
 
@@ -142,6 +143,11 @@ class Pipeline(schemaflow.pipe.Pipe):
 
     def transform_schema(self, schema: dict):
         for key, pipe in self.pipes.items():
+            try:
+                pipe.check_transform(schema, True)
+            except _exceptions.SchemaFlowError as e:
+                e.locations.append('in step %s of %s' % (key, self.__class__.__name__))
+                raise e
             schema = pipe.transform_schema(schema)
         return schema
 

@@ -98,13 +98,14 @@ class Pipe:
                 exceptions.append(_exceptions.MissingRequirement(requirement))
         return exceptions
 
-    def check_fit(self, data: dict, parameters: dict=None):
+    def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
         """
         Checks that a given data has a valid schema to be used in :meth:`fit`.
 
-        :param data:
-        :param parameters:
-        :return: a list of (subclasses of) :class:`~schemaflow.exceptions.SchemaFlowError` with all missing arguments.
+        :param data: a dictionary with either ``(str, Type)`` or ``(str, instance)``
+        :param parameters: a dictionary with either ``(str, Type)`` or ``(str, instance)``
+        :param raise_: whether it should raise the first found exception or list them all (default: list them)
+        :return: a list of (subclasses of) :class:`~pipeline.exceptions.PipelineError` with all failed checks.
         """
         if parameters is None:
             parameters = {}
@@ -114,42 +115,52 @@ class Pipe:
         data_keys = set(data.keys())
         required_keys = set(self.fit_data.keys())
         if len(required_keys - data_keys):
-            exceptions.append(
-                _exceptions.WrongData('Missing arguments in fit:'
-                                      '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
-            )
+            exception = _exceptions.WrongSchema(
+                required_keys,
+                data_keys, ['in fit'])
+            if raise_:
+                raise exception
+            exceptions.append(exception)
 
         for key in self.fit_data:
             expected_type = self._get_type(self.fit_data[key])
             if key in data:
                 new_exceptions = expected_type.check_schema(data[key])
                 for exception in new_exceptions:
-                    exception.location = 'argument \'%s\' in fit' % key
+                    exception.locations.append('argument \'%s\' in fit' % key)
                 exceptions += new_exceptions
 
-        keys1 = set(parameters.keys())
-        keys2 = set(self.fit_parameters.keys())
-        if keys1 != keys2:
-            exceptions.append(
-                _exceptions.WrongParameter('Unexpected or missing parameter in fit:'
-                                           '\nExpected parameter: %s\nPassed parameter:   %s' % (keys2, keys1))
-            )
+        # check that parameters are correct
+        parameters_keys = set(parameters.keys())
+        expected_parameters = set(self.fit_parameters.keys())
+        if parameters_keys != expected_parameters:
+            exception = _exceptions.WrongParameter(
+                expected_parameters,
+                parameters_keys, ['in fit'])
+            if raise_:
+                raise exception
+            exceptions.append(exception)
 
         for key in self.fit_parameters:
             expected_type = self._get_type(self.fit_parameters[key])
             if key in parameters:
-                new_exceptions = expected_type.check_schema(parameters[key])
+                try:
+                    new_exceptions = expected_type.check_schema(parameters[key], raise_)
+                except _exceptions.SchemaFlowError as e:
+                    e.locations.append('in parameter \'%s\' of fit' % key)
+                    raise e
                 for exception in new_exceptions:
-                    exception.location = 'parameter \'%s\' in fit' % key
+                    exception.locations.append('in parameter \'%s\' of fit' % key)
                 exceptions += new_exceptions
 
         return exceptions
 
-    def check_transform(self, data: dict):
+    def check_transform(self, data: dict, raise_: bool=False):
         """
         Checks that a given data has a valid schema to be used in :meth:`transform`.
 
-        :param data:
+        :param data: a dictionary with either ``(str, Type)`` or ``(str, instance)``
+        :param raise_: whether it should raise the first found exception or list them all (default: list them)
         :return: a list of (subclasses of) :class:`schemaflow.exceptions.SchemaFlowError` with all missing arguments.
         """
         exceptions = []
@@ -157,26 +168,27 @@ class Pipe:
         data_keys = set(data.keys())
         required_keys = set(self.transform_data.keys())
         if len(required_keys - data_keys):
-            exceptions.append(
-                _exceptions.WrongData('Missing arguments in transform:'
-                                      '\nRequired arguments: %s\nPassed arguments:   %s' % (required_keys, data_keys))
-            )
+            exception = _exceptions.WrongSchema(
+                required_keys,
+                data_keys, ['in transform'])
+            if raise_:
+                raise exception
+            exceptions.append(exception)
 
         for key in self.transform_data:
             expected_type = self._get_type(self.transform_data[key])
             if key in data:
-                new_exceptions = expected_type.check_schema(data[key])
+                try:
+                    new_exceptions = expected_type.check_schema(data[key], raise_)
+                except _exceptions.SchemaFlowError as e:
+                    e.locations.append('in argument \'%s\' of transform' % key)
+                    raise e
                 for exception in new_exceptions:
-                    exception.location = 'argument \'%s\' in transform' % key
+                    exception.locations.append('in argument \'%s\' of transform' % key)
+                exceptions += new_exceptions
         return exceptions
 
-    def transform_schema(self, schema: dict):
-        """
-        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`.
-
-        :param schema: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
-        :return: the new schema.
-        """
+    def _transform_schema(self, schema: dict):
         for key, value in self.transform_modifies.items():
             if isinstance(value, schemaflow.ops.Operation):
                 schema = value.transform(key, schema)
@@ -186,6 +198,16 @@ class Pipe:
                 schema[key] = value
         return schema
 
+    def transform_schema(self, schema: dict):
+        """
+        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`.
+
+        :param schema: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
+        :return: the new schema.
+        """
+        self.check_transform(schema, True)
+        return self._transform_schema(schema)
+
     def fit(self, data: dict, parameters: dict=None):
         """
         Modifies the instance's :attr:`state`.
@@ -194,7 +216,6 @@ class Pipe:
         :param parameters:
         :return: None
         """
-        pass
 
     def transform(self, data: dict):
         """
