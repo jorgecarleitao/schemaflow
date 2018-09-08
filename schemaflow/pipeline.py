@@ -106,16 +106,6 @@ class Pipeline(schemaflow.pipe.Pipe):
             fitted_parameters[name] = pipe.fitted_parameters
         return fitted_parameters
 
-    @property
-    def requirements(self):
-        """
-        :return: the union of all :attr:`~schemaflow.pipe.Pipe.requirements` of all pipes in the schemaflow.
-        """
-        requirements = set()
-        for pipe in self.pipes:
-            requirements = requirements.union(pipe.requirements)
-        return requirements
-
     def check_transform(self, data: dict=None, raise_: bool=False):
         errors = []
         for key, pipe in self.pipes.items():

@@ -61,7 +61,6 @@ Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe
 
 
     class MyPipe(pipe.Pipe):
-        requirements = {'sklearn'}
 
         # variables required by fit (supervised learning)
         fit_data = {

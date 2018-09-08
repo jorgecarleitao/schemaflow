@@ -6,11 +6,7 @@ import schemaflow.exceptions as _exceptions
 class Type:
     """
     The base type of all types. Used to declare new types to be used in :class:`schemaflow.pipe.Pipe`.
-
-    The class attribute :attr:`requirements` (a set of strings) is used to define if using this type has
-    package requirements (e.g. `numpy`).
     """
-    requirements = {}  #: set of packages required for this type to be usable.
 
     def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
@@ -152,8 +148,6 @@ class PySparkDataFrame(_DataFrame):
     """
     Representation of a pyspark.sql.DataFrame. Requires ``pyspark``.
     """
-    requirements = {'pyspark'}
-
     @staticmethod
     def _own_type():
         import pyspark.sql
@@ -178,8 +172,6 @@ class PandasDataFrame(_DataFrame):
     """
     Representation of a pandas.DataFrame. Requires ``pandas``.
     """
-    requirements = {'pandas'}
-
     @staticmethod
     def _own_type():
         import pandas
@@ -235,8 +227,6 @@ class Array(_Container):
     """
     Representation of a numpy.array. Requires ``numpy``.
     """
-    requirements = {'numpy'}
-
     def __init__(self, items_type: type, shape=None):
         import numpy
         assert issubclass(items_type, (numpy.generic, float, int, bool))

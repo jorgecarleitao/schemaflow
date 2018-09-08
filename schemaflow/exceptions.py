@@ -8,14 +8,6 @@ class SchemaFlowError(Exception):
         self.locations = locations
 
 
-class MissingRequirement(Exception):
-    """
-    :class:`~schemaflow.exceptions.SchemaFlowError` raised when a requirement is missing
-    """
-    def __init__(self, requirement):
-        self.requirement = requirement
-
-
 class WrongSchema(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the schema of a datum is wrong (e.g. wrong shape)
