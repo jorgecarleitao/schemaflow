@@ -35,6 +35,20 @@ on each pipe and therefore the whole pipeline.
     cd docs && make html && cd ..
     open docs/build/html/index.html
 
+## Run examples
+
+We currently provide one example that demonstrate the usage of Schemaflow's API
+on developing an end-to-end pipeline applied to 
+[one of Kaggle's exercises](https://www.kaggle.com/c/house-prices-advanced-regression-techniques).
+
+To run it, download the data in that exercise to `examples/all/` and run
+
+    pip install -r requirements_examples.txt
+    python examples/end_to_end_kaggle.py
+
+You should see some prints to the console as well as the generation of 3 files at 
+`examples/`: two plots and one `submission.txt`.
+
 ## Use cases
 
 You have a hadoop cluster with csv/etc., use PySpark to process them

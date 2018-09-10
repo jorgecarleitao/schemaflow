@@ -1,5 +1,11 @@
 venv
+dist/
+build/
+examples/all
 __pycache__
 .idea
 .DS_Store
 docs/build
+*.egg-info/
+*.png
+*.csv

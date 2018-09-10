@@ -1,0 +1,5 @@
+numpy
+scikit-learn
+scipy  # dependency of sklearn
+pandas
+mathplotlib
