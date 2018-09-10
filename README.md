@@ -20,7 +20,7 @@ with my pipeline *without* running the whole pipeline multiple times until I get
 This package declares an API to define a stateful data transformation that gives 
 the developer the opportunity to declare what comes in, what comes out, and what states are modified
 on each pipe and therefore the whole pipeline. Check out 
-[`tests/test_pipeline.py`](https://github.com/jorgecarleitao/schemaflow/blob/master/schemaflow/tests/test_pipeline.py) or 
+[`tests/test_pipeline.py`](https://github.com/jorgecarleitao/schemaflow/blob/master/tests/test_pipeline.py) or 
 [`examples/end_to_end_kaggle.py`](https://github.com/jorgecarleitao/schemaflow/blob/master/examples/end_to_end_kaggle.py)
 
 ## Install 
