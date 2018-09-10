@@ -34,12 +34,12 @@ or, install the latest (recommended for now):
 
 ## Run tests
 
-    pip install -r requirements_tests.txt
+    pip install -r tests/requirements.txt
     python -m unittest discover
 
 ## Build documentation
 
-    pip install -r requirements_docs.txt
+    pip install -r docs/requirements.txt
     cd docs && make html && cd ..
     open docs/build/html/index.html
 
@@ -51,7 +51,7 @@ on developing an end-to-end pipeline applied to
 
 To run it, download the data in that exercise to `examples/all/` and run
 
-    pip install -r requirements_examples.txt
+    pip install -r examples/requirements.txt
     python examples/end_to_end_kaggle.py
 
 You should see some prints to the console as well as the generation of 3 files at 
