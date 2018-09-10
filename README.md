@@ -7,22 +7,30 @@
 This is a a package to write data pipelines for data science systematically in Python.
 Thanks for checking it out.
 
+Check out the very comprehensive documentation [here](https://schemaflow.readthedocs.io/en/latest/).
+
 ## The problem that this package solves
 
 A major challenge in creating a robust data pipeline is guaranteeing interoperability between
 pipes: how do we guarantee that the pipe that someone wrote is compatible
 with my pipeline *without* running the whole pipeline multiple times until I get it right?
 
-## The solution this package adopts
+## The solution that this package adopts
  
-This package declares an interface to define a stateful data transformation that gives 
+This package declares an API to define a stateful data transformation that gives 
 the developer the opportunity to declare what comes in, what comes out, and what states are modified
-on each pipe and therefore the whole pipeline.
+on each pipe and therefore the whole pipeline. Check out 
+[`tests/test_pipeline.py`](https://github.com/jorgecarleitao/schemaflow/blob/master/schemaflow/tests/test_pipeline.py) or 
+[`examples/end_to_end_kaggle.py`](https://github.com/jorgecarleitao/schemaflow/blob/master/examples/end_to_end_kaggle.py)
 
 ## Install 
 
-    # git clone the repository
-    pip install .
+    pip install schemaflow
+
+or, install the latest (recommended for now):
+
+   git clone https://github.com/jorgecarleitao/schemaflow
+   cd schemaflow && pip install -e .
 
 ## Run tests
 
