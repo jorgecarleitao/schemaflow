@@ -29,8 +29,8 @@ on each pipe and therefore the whole pipeline. Check out
 
 or, install the latest (recommended for now):
 
-   git clone https://github.com/jorgecarleitao/schemaflow
-   cd schemaflow && pip install -e .
+    git clone https://github.com/jorgecarleitao/schemaflow
+    cd schemaflow && pip install -e .
 
 ## Run tests
 
