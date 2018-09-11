@@ -57,7 +57,11 @@ class FillNaN(Pipe):
 
 
 class JoinCategoricalAsOneHot(Pipe):
-    fit_data = transform_data = {'x_categorical': sf_types.PandasDataFrame(schema={})}
+    fit_data = {'x_categorical': sf_types.PandasDataFrame(schema={})}
+    transform_data = {
+        'x': sf_types.PandasDataFrame(schema={}),
+        'x_categorical': sf_types.PandasDataFrame(schema={})
+    }
     transform_modifies = {
         'x_categorical': sf_ops.Drop(),
         'x': sf_types.PandasDataFrame(schema={})
@@ -198,7 +202,7 @@ if __name__ == '__main__':
     print('fitted parameters: ', predict_pipeline.fitted_parameters)
 
     print('expected transform schema: ', predict_pipeline.transform_data)
-    print('expected outcome schema: ', predict_pipeline.transform_schema(predict_pipeline.transform_data))
+    print('expected transformed schema: ', predict_pipeline.transform_schema(predict_pipeline.transform_data))
 
     # execution of the pipeline
     target_column = 'SalePrice'
