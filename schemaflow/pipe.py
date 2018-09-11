@@ -179,16 +179,16 @@ class Pipe:
         """
         Modifies the instance's :attr:`state`.
 
-        :param data:
-        :param parameters:
-        :return: None
+        :param data: a dictionary of pairs ``(str, object)``.
+        :param parameters: a dictionary of pairs ``(str, object)``.
+        :return: ``None``
         """
 
     def transform(self, data: dict):
         """
         Modifies the data keys identified in :attr:`transform_modifies`.
 
-        :param data:
+        :param data: a dictionary of pairs ``(str, object)``.
         :return: the modified data
         """
         return data
