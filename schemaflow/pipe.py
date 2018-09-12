@@ -1,6 +1,12 @@
+import logging
+
 import schemaflow.types
 import schemaflow.ops
 import schemaflow.exceptions as _exceptions
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class Pipe:
@@ -57,6 +63,8 @@ class Pipe:
         self.state.__setitem__(key, value)
 
     def __getitem__(self, key):
+        if key not in self.state:
+            raise _exceptions.NotFittedError(self, key)
         return self.state.__getitem__(key)
 
     @staticmethod
@@ -192,3 +200,37 @@ class Pipe:
         :return: the modified data
         """
         return data
+
+    def logged_transform(self, data: dict):
+        """
+        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`. Logs the intermediary
+        steps using ``logging``.
+
+        :param schema: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
+        :return: the new schema.
+        """
+        data_schema = dict((key, type(value)) for key, value in data.items())
+        logger.info('In %s.transform(%s)' % (self.__class__.__name__, data_schema))
+        errors = self.check_transform(data)
+        for error in errors:
+            logger.error(str(error))
+        transformed = self.transform(data)
+        new_data_schema = dict((key, type(value)) for key, value in data.items())
+        for error in errors:
+            logger.error(str(error))
+        logger.info('Ended %s.transform(%s) with %s' % (self.__class__.__name__, data_schema, new_data_schema))
+        return transformed
+
+    def logged_fit(self, data: dict, parameters: dict = None):
+        """
+        Modifies the instance's :attr:`state`. Logs the intermediary steps using ``logging``.
+
+        :param data: a dictionary of pairs ``(str, object)``.
+        :param parameters: a dictionary of pairs ``(str, object)``.
+        :return: ``None``
+        """
+        data_schema = dict((key, type(value)) for key, value in data.items())
+        logger.info('In %s.fit(%s)' % (self.__class__.__name__, data_schema))
+        self.fit(data, parameters)
+        state_schema = dict((key, type(value)) for key, value in self.state.items())
+        logger.info('Ended %s.fit(%s) with %s' % (self.__class__.__name__, data_schema, state_schema))

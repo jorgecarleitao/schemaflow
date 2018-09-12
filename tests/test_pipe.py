@@ -1,8 +1,27 @@
 import unittest
+import logging
 
 import numpy as np
 
 from schemaflow import pipe, types, exceptions
+
+
+class MockLoggingHandler(logging.Handler):
+    """Mock logging handler to check for expected logs."""
+    # see https://stackoverflow.com/a/1049375/931303
+
+    def __init__(self, *args, **kwargs):
+        self.messages = {
+            'debug': [],
+            'info': [],
+            'warning': [],
+            'error': [],
+            'critical': [],
+        }
+        logging.Handler.__init__(self, *args, **kwargs)
+
+    def emit(self, record):
+        self.messages[record.levelname.lower()].append(record.getMessage())
 
 
 class Pipe(pipe.Pipe):
@@ -44,6 +63,15 @@ class Pipe(pipe.Pipe):
 
 
 class TestPipe(unittest.TestCase):
+
+    def setUp(self):
+        logger = logging.getLogger()
+        logger.level = logging.DEBUG
+        self._handler = MockLoggingHandler()
+        logger.addHandler(self._handler)
+
+    def tearDown(self):
+        logging.getLogger().removeHandler(self._handler)
 
     def test_fit_transform(self):
         p = Pipe()
@@ -125,6 +153,26 @@ class TestPipe(unittest.TestCase):
         with self.assertRaises(exceptions.WrongType) as e:
             p.check_transform(bad_data_type, raise_=True)
         self.assertIn('in argument \'x\' of transform', str(e.exception))
+
+    def test_logged(self):
+        p = Pipe()
+
+        good_fit_data = {'x': np.array([[1.0, 2.0], [2.0, 1.0]]), 'y': [1.0, 2.0]}
+        good_transform_data = {'x': [1.0]}
+
+        p.logged_fit(good_fit_data, {'alpha': 0.1})
+        self.assertEqual(self._handler.messages['error'], [])
+        self.assertEqual(len(self._handler.messages['info']), 2)
+
+        p.logged_transform(good_transform_data)
+
+        self.assertEqual(self._handler.messages['error'], [])
+        self.assertEqual(len(self._handler.messages['info']), 4)
+
+        p = Pipe()
+        with self.assertRaises(exceptions.NotFittedError) as e:
+            p['model']
+        self.assertIn('model', str(e.exception))
 
     def test_transform_schema(self):
         p = Pipe()

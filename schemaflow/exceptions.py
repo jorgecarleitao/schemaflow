@@ -8,6 +8,20 @@ class SchemaFlowError(Exception):
         self.locations = locations
 
 
+class NotFittedError(SchemaFlowError):
+    """
+    :class:`~schemaflow.exceptions.SchemaFlowError` raised when someone tries to access a non-fitted parameter.
+    """
+    def __init__(self, pipe, key, locations: list=None):
+        self.pipe = pipe
+        self.key = key
+        super().__init__(locations)
+
+    def __str__(self):
+        return 'The pipe \'%s\' %s needs to be fitted before its state \'%s\' is usable' % \
+            (self.pipe.__class__.__name__, ' '.join(self.locations), self.key)
+
+
 class WrongSchema(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the schema of a datum is wrong (e.g. wrong shape)
