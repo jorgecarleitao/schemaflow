@@ -1,4 +1,5 @@
 import logging
+import importlib.util
 
 import schemaflow.types
 import schemaflow.ops
@@ -30,15 +31,24 @@ class Pipe:
         - uses (passed) :attr:`fit_parameters`
         - modifies the keys :attr:`fitted_parameters` in :attr:`state`
 
+    - a set of :attr:`requirements` (a set of package names, e.g. ``{'pandas'}``) of the transformation
+
     All :attr:`transform_modifies` and :attr:`fit_data` have a :class:`~schemaflow.types.Type` that can
     be used to check that the Pipe's input is consistent, with
 
         - :meth:`check_fit`
         - :meth:`check_transform`
 
+    The existence of the requirements can be checked using
+
+        - :meth:`check_requirements`
+
     The rational is that you can run ``check_*`` with access only to the data's schema.
     This is specially important when the schemaflow is an expensive operation.
     """
+    #: set of packages required by the Pipe.
+    requirements = set()
+
     #: the data schema required in :meth:`~fit`;
     #: a dictionary ``str``: :class:`~schemaflow.types.Type`.
     fit_data = {}
@@ -72,6 +82,29 @@ class Pipe:
         if not isinstance(type, schemaflow.types.Type):
             type = schemaflow.types._LiteralType(type)
         return type
+
+    @property
+    def requirements_fulfilled(self):
+        """
+        Checks for requirements.
+
+        :return: a list of exceptions with missing requirements
+        """
+        requirements = self.requirements
+        for value_type in self.fit_data.values():
+            requirements = requirements.union(value_type.requirements)
+        for value_type in self.transform_data.values():
+            requirements = requirements.union(value_type.requirements)
+        for value_type in self.fit_parameters.values():
+            requirements = requirements.union(value_type.requirements)
+        for value_type in self.fitted_parameters.values():
+            requirements = requirements.union(value_type.requirements)
+
+        exceptions = []
+        for requirement in requirements:
+            if importlib.util.find_spec(requirement) is None:
+                exceptions.append(_exceptions.MissingRequirement(requirement))
+        return exceptions
 
     def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
         """

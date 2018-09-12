@@ -22,6 +22,15 @@ class NotFittedError(SchemaFlowError):
             (self.pipe.__class__.__name__, ' '.join(self.locations), self.key)
 
 
+class MissingRequirement(SchemaFlowError):
+    """
+    :class:`~schemaflow.exceptions.SchemaFlowError` raised when a requirement is missing
+    """
+    def __init__(self, requirement, locations: list=None):
+        super().__init__(locations)
+        self.requirement = requirement
+
+
 class WrongSchema(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when the schema of a datum is wrong (e.g. wrong shape)
