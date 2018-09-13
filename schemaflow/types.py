@@ -3,6 +3,26 @@ import datetime
 import schemaflow.exceptions as _exceptions
 
 
+class classproperty(object):
+    # see https://stackoverflow.com/a/13624858/931303
+    def __init__(self, fget):
+        self.fget = fget
+
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)
+
+
+def infer_schema(instance):
+    subclasses = (subclass for subclass in Type.__subclasses__()
+                  if subclass.requirements_fulfilled and not subclass.__class__.__name__.startswith('_'))
+
+    for subclass in subclasses:
+        if isinstance(instance, subclass.type):
+            type_instance = subclass.init_from_instance(instance)
+            return type_instance
+    return _LiteralType(instance)
+
+
 class Type:
     """
     The base type of all types. Used to declare new types to be used in :class:`schemaflow.pipe.Pipe`.
@@ -11,6 +31,14 @@ class Type:
     package requirements (e.g. `numpy`).
     """
     requirements = {}  #: set of packages required for this type to be usable.
+
+    @classproperty
+    def type(cls):
+        """
+        A class property that returns the underlying type of this Type.
+        :return:
+        """
+        raise NotImplementedError
 
     def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
@@ -96,13 +124,6 @@ class _DataFrame(Type):
         del self.schema[key]
 
     @staticmethod
-    def _own_type():
-        """
-        Returns the DataFrame's type
-        """
-        raise NotImplementedError
-
-    @staticmethod
     def _get_schema(instance):
         """
         Return the DataFrame's schema from an instance
@@ -135,10 +156,8 @@ class _DataFrame(Type):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        expected_type = self._own_type()
-
-        if not isinstance(instance, expected_type):
-            exception = _exceptions.WrongType(expected_type, type(instance))
+        if not isinstance(instance, self.type):
+            exception = _exceptions.WrongType(self.type, type(instance))
             if raise_:
                 raise exception
             return [exception]
@@ -154,8 +173,8 @@ class PySparkDataFrame(_DataFrame):
     """
     requirements = {'pyspark'}
 
-    @staticmethod
-    def _own_type():
+    @classproperty
+    def type(cls):
         import pyspark.sql
         return pyspark.sql.DataFrame
 
@@ -180,8 +199,8 @@ class PandasDataFrame(_DataFrame):
     """
     requirements = {'pandas'}
 
-    @staticmethod
-    def _own_type():
+    @classproperty
+    def type(cls):
         import pandas
         return pandas.DataFrame
 
@@ -191,7 +210,7 @@ class PandasDataFrame(_DataFrame):
 
 
 class _Container(Type):
-    _own_type = _LiteralType(list)
+    type = list
 
     def __init__(self, items_type):
         if not isinstance(items_type, Type):
@@ -211,10 +230,11 @@ class _Container(Type):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        # the instance is not a type, we do type checking
-        exceptions = self._own_type.check_schema(instance, raise_)
-        if exceptions:
-            return exceptions
+        if not isinstance(instance, self.type):
+            exception = _exceptions.WrongType(self.type, type(instance))
+            if raise_:
+                raise exception
+            return [exception]
 
         exceptions = []
         if not exceptions:
@@ -224,11 +244,11 @@ class _Container(Type):
 
 
 class List(_Container):
-    _own_type = _LiteralType(list)
+    pass
 
 
 class Tuple(_Container):
-    _own_type = _LiteralType(tuple)
+    type = tuple
 
 
 class Array(_Container):
@@ -257,20 +277,25 @@ class Array(_Container):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        exceptions = self._own_type.check_schema(instance, raise_)
-        if not exceptions:
-            assert hasattr(instance, 'dtype')
-            if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
-                if not self._is_valid_shape(instance.shape):
-                    exception = _exceptions.WrongShape(self.shape, instance.shape)
-                    if raise_:
-                        raise exception
-                    exceptions.append(exception)
-            else:
-                exception = _exceptions.WrongType(self._items_type.type, instance.dtype)
+        if not isinstance(instance, self.type):
+            exception = _exceptions.WrongType(self.type, type(instance))
+            if raise_:
+                raise exception
+            return [exception]
+
+        exceptions = []
+        assert hasattr(instance, 'dtype')
+        if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
+            if not self._is_valid_shape(instance.shape):
+                exception = _exceptions.WrongShape(self.shape, instance.shape)
                 if raise_:
                     raise exception
                 exceptions.append(exception)
+        else:
+            exception = _exceptions.WrongType(self._items_type.type, instance.dtype)
+            if raise_:
+                raise exception
+            exceptions.append(exception)
         return exceptions
 
     def _is_valid_shape(self, shape):
@@ -282,7 +307,7 @@ class Array(_Container):
                     return False
         return True
 
-    @property
-    def _own_type(self):
+    @classproperty
+    def type(cls):
         import numpy
-        return _LiteralType(numpy.ndarray)
+        return numpy.ndarray
