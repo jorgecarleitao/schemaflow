@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from schemaflow.types import PandasDataFrame
+from schemaflow.types import PandasDataFrame, infer_schema
 
 
 class TestPandasDataFrame(unittest.TestCase):
@@ -43,3 +43,9 @@ class TestPandasDataFrame(unittest.TestCase):
 
         # wrong datum type
         self.assertEqual(len(type.check_schema(int)), 1)
+
+    def test_infer(self):
+        instance = pd.DataFrame(data={'a': [1.0, 1.0], 'b': ['a', 'b']})
+
+        schema = infer_schema({'a': instance})
+        self.assertEqual(schema, {'a': PandasDataFrame(schema={'a': pd.np.float64, 'b': pd.np.dtype('O')})})

@@ -5,7 +5,7 @@ import numpy as np
 import pyspark
 from pyspark.sql.types import Row
 
-from schemaflow.types import PySparkDataFrame
+from schemaflow.types import PySparkDataFrame, infer_schema
 
 
 class PySparkTestCase(unittest.TestCase):
@@ -86,3 +86,9 @@ class TestPySparkDataFrame(PySparkTestCase):
 
         instance = self.sqlContext.createDataFrame(data=[Row(a=1)])
         self.assertEqual(len(instance_type.check_schema(instance)), 1)
+
+    def test_infer(self):
+        instance = self.sqlContext.createDataFrame(data=[Row(a=1.0, b='a'), Row(a=1.0, b='b')])
+
+        schema = infer_schema({'a': instance})
+        self.assertEqual(schema, {'a': PySparkDataFrame(schema={'a': float, 'b': np.dtype('O')})})

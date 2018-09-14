@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from schemaflow.types import Array
+from schemaflow.types import Array, infer_schema
 from schemaflow import exceptions
 
 
@@ -77,3 +77,9 @@ class TestArray(unittest.TestCase):
         with self.assertRaises(exceptions.WrongShape) as e:
             array_type.check_schema(instance, True)
         self.assertIn('Wrong shape', str(e.exception))
+
+    def test_infer(self):
+        instance = np.array([[1.0], [2.0]])
+
+        schema = infer_schema({'a': instance})
+        self.assertEqual(schema, {'a': Array(np.float64, (2, 1))})

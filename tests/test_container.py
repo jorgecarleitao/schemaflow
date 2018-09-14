@@ -1,6 +1,6 @@
 import unittest
 
-from schemaflow.types import List, Tuple
+from schemaflow.types import List, Tuple, infer_schema
 
 
 class TestListTuple(unittest.TestCase):
@@ -34,3 +34,9 @@ class TestListTuple(unittest.TestCase):
 
         array_type = Tuple(float)
         self.assertEqual(array_type.check_schema(Tuple(float)), [])
+
+    def test_infer(self):
+        instance = [1.0, 2.0]
+
+        schema = infer_schema({'a': instance})
+        self.assertEqual(schema, {'a': List(float)})

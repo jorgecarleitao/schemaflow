@@ -3,24 +3,24 @@ import datetime
 import schemaflow.exceptions as _exceptions
 
 
-class classproperty(object):
-    # see https://stackoverflow.com/a/13624858/931303
-    def __init__(self, fget):
-        self.fget = fget
-
-    def __get__(self, owner_self, owner_cls):
-        return self.fget(owner_cls)
+def _all_subclasses(cls):
+    return set(cls.__subclasses__()).union(
+        [s for c in cls.__subclasses__() for s in _all_subclasses(c)])
 
 
-def infer_schema(instance):
-    subclasses = (subclass for subclass in Type.__subclasses__()
-                  if subclass.requirements_fulfilled and not subclass.__class__.__name__.startswith('_'))
+def infer_schema(data: dict):
+    subclasses = (subclass for subclass in _all_subclasses(Type)
+                  if subclass.requirements_fulfilled and not subclass.__name__.startswith('_'))
 
-    for subclass in subclasses:
-        if isinstance(instance, subclass.type):
-            type_instance = subclass.init_from_instance(instance)
-            return type_instance
-    return _LiteralType(instance)
+    schema = {}
+    for key, value in data.items():
+        for subclass in subclasses:
+            if isinstance(value, subclass.base_type()):
+                schema[key] = subclass.infer(value)
+                break
+        else:
+            schema[key] = type(value)
+    return schema
 
 
 class Type:
@@ -32,12 +32,16 @@ class Type:
     """
     requirements = {}  #: set of packages required for this type to be usable.
 
-    @classproperty
-    def type(cls):
+    @classmethod
+    def base_type(cls):
         """
         A class property that returns the underlying type of this Type.
         :return:
         """
+        raise NotImplementedError
+
+    @classmethod
+    def infer(cls, instance):
         raise NotImplementedError
 
     def _check_as_instance(self, instance: object, raise_: bool):
@@ -80,7 +84,7 @@ class _LiteralType(Type):
         return 'L(%s)' % self._base_type
 
     @property
-    def type(self):
+    def base_type(self):
         return self._base_type
 
     def _check_as_instance(self, instance: object, raise_: bool):
@@ -123,6 +127,11 @@ class _DataFrame(Type):
     def __delitem__(self, key):
         del self.schema[key]
 
+    @classmethod
+    def infer(cls, instance):
+        assert isinstance(instance, cls.base_type())
+        return cls(schema=cls._get_schema(instance))
+
     @staticmethod
     def _get_schema(instance):
         """
@@ -139,8 +148,8 @@ class _DataFrame(Type):
                     raise exception
                 exceptions.append(exception)
             else:
-                column_type = schema[column].type
-                expected_type = self.schema[column].type
+                column_type = schema[column].base_type
+                expected_type = self.schema[column].base_type
                 if expected_type != column_type:
                     exception = _exceptions.WrongType(
                         expected_type, column_type, 'column \'%s\'' % column)
@@ -156,8 +165,8 @@ class _DataFrame(Type):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        if not isinstance(instance, self.type):
-            exception = _exceptions.WrongType(self.type, type(instance))
+        if not isinstance(instance, self.base_type()):
+            exception = _exceptions.WrongType(self.base_type(), type(instance))
             if raise_:
                 raise exception
             return [exception]
@@ -173,8 +182,8 @@ class PySparkDataFrame(_DataFrame):
     """
     requirements = {'pyspark'}
 
-    @classproperty
-    def type(cls):
+    @classmethod
+    def base_type(cls):
         import pyspark.sql
         return pyspark.sql.DataFrame
 
@@ -199,8 +208,8 @@ class PandasDataFrame(_DataFrame):
     """
     requirements = {'pandas'}
 
-    @classproperty
-    def type(cls):
+    @classmethod
+    def base_type(cls):
         import pandas
         return pandas.DataFrame
 
@@ -210,19 +219,34 @@ class PandasDataFrame(_DataFrame):
 
 
 class _Container(Type):
-    type = list
+
+    @classmethod
+    def base_type(cls):
+        return list
 
     def __init__(self, items_type):
         if not isinstance(items_type, Type):
             items_type = _LiteralType(items_type)
         self._items_type = items_type
 
+    @classmethod
+    def infer(cls, instance):
+        assert isinstance(instance, cls.base_type())
+
+        inferred_items_type = object
+        if len(instance):
+            inferred_items_type = type(instance[0])
+            if any(type(item) != inferred_items_type for item in instance):
+                inferred_items_type = object
+
+        return cls(inferred_items_type)
+
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self._items_type.type.__name__)
+        return '%s(%s)' % (self.__class__.__name__, self._items_type.base_type.__name__)
 
     def _check_as_type(self, instance, raise_: bool):
         exceptions = super()._check_as_type(instance, raise_)
-        if not exceptions and self._items_type.type != instance._items_type.type:
+        if not exceptions and self._items_type.base_type != instance._items_type.base_type:
             exception = _exceptions.WrongType(self, instance)
             if raise_:
                 raise exception
@@ -230,8 +254,8 @@ class _Container(Type):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        if not isinstance(instance, self.type):
-            exception = _exceptions.WrongType(self.type, type(instance))
+        if not isinstance(instance, self.base_type()):
+            exception = _exceptions.WrongType(self.base_type(), type(instance))
             if raise_:
                 raise exception
             return [exception]
@@ -248,7 +272,9 @@ class List(_Container):
 
 
 class Tuple(_Container):
-    type = tuple
+    @classmethod
+    def base_type(cls):
+        return tuple
 
 
 class Array(_Container):
@@ -259,12 +285,21 @@ class Array(_Container):
 
     def __init__(self, items_type: type, shape=None):
         import numpy
-        assert issubclass(items_type, (numpy.generic, float, int, bool))
+        assert isinstance(items_type, numpy.dtype) or issubclass(items_type, (numpy.generic, float, int, bool))
         if items_type == float:
             items_type = numpy.float64
         super().__init__(_LiteralType(items_type))
         assert isinstance(shape, (type(None), tuple))
         self.shape = shape
+
+    def __repr__(self):
+        return '%s(%s, %s)' % (self.__class__.__name__, self._items_type.base_type.__name__, self.shape)
+
+    @classmethod
+    def infer(cls, instance):
+        assert isinstance(instance, cls.base_type())
+
+        return cls(instance.dtype, instance.shape)
 
     def _check_as_type(self, instance, raise_: bool):
         exceptions = super()._check_as_type(instance, raise_)
@@ -277,22 +312,22 @@ class Array(_Container):
         return exceptions
 
     def _check_as_instance(self, instance: object, raise_: bool):
-        if not isinstance(instance, self.type):
-            exception = _exceptions.WrongType(self.type, type(instance))
+        if not isinstance(instance, self.base_type()):
+            exception = _exceptions.WrongType(self.base_type(), type(instance))
             if raise_:
                 raise exception
             return [exception]
 
         exceptions = []
         assert hasattr(instance, 'dtype')
-        if instance.dtype == self._items_type.type and hasattr(instance, 'shape'):
+        if instance.dtype == self._items_type.base_type and hasattr(instance, 'shape'):
             if not self._is_valid_shape(instance.shape):
                 exception = _exceptions.WrongShape(self.shape, instance.shape)
                 if raise_:
                     raise exception
                 exceptions.append(exception)
         else:
-            exception = _exceptions.WrongType(self._items_type.type, instance.dtype)
+            exception = _exceptions.WrongType(self._items_type.base_type, instance.dtype)
             if raise_:
                 raise exception
             exceptions.append(exception)
@@ -307,7 +342,7 @@ class Array(_Container):
                     return False
         return True
 
-    @classproperty
-    def type(cls):
+    @classmethod
+    def base_type(cls):
         import numpy
         return numpy.ndarray
