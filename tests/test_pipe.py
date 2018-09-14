@@ -156,6 +156,12 @@ class TestPipe(unittest.TestCase):
             p.check_transform(bad_data_type, raise_=True)
         self.assertIn('in argument \'x\' of transform', str(e.exception))
 
+    def test_not_fitted(self):
+        p = Pipe()
+        with self.assertRaises(exceptions.NotFittedError) as e:
+            p['model']
+        self.assertIn('model', str(e.exception))
+
     def test_logged(self):
         p = Pipe()
 
@@ -170,11 +176,6 @@ class TestPipe(unittest.TestCase):
 
         self.assertEqual(self._handler.messages['error'], [])
         self.assertEqual(len(self._handler.messages['info']), 4)
-
-        p = Pipe()
-        with self.assertRaises(exceptions.NotFittedError) as e:
-            p['model']
-        self.assertIn('model', str(e.exception))
 
     def test_transform_schema(self):
         p = Pipe()
