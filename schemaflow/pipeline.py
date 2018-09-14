@@ -129,10 +129,14 @@ class Pipeline(schemaflow.pipe.Pipe):
 
         errors = []
         for key, pipe in self.pipes.items():
-            if key in parameters:
-                errors += pipe.check_fit(data, parameters[key], raise_)
-            else:
-                errors += pipe.check_fit(data, {}, raise_)
+            try:
+                if key in parameters:
+                    errors += pipe.check_fit(data, parameters[key], raise_)
+                else:
+                    errors += pipe.check_fit(data, {}, raise_)
+            except _exceptions.SchemaFlowError as e:
+                e.locations.append('in fit of %s of %s' % (key, self.__class__.__name__))
+                raise e
             data = pipe.transform_schema(data)
         return errors
 
@@ -146,7 +150,7 @@ class Pipeline(schemaflow.pipe.Pipe):
             try:
                 pipe.check_transform(schema, True)
             except _exceptions.SchemaFlowError as e:
-                e.locations.append('in step %s of %s' % (key, self.__class__.__name__))
+                e.locations.append('in transform of %s of %s' % (key, self.__class__.__name__))
                 raise e
             schema = pipe.transform_schema(schema)
         return schema

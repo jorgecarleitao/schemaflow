@@ -232,19 +232,19 @@ class Pipe:
         :param data: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
         :return: the new schema.
         """
-        schema = dict((key, type(value)) for key, value in data.items())
+        schema = schemaflow.types.infer_schema(data)
         logger.info('In %s.transform(%s)' % (self.__class__.__name__, schema))
 
         for error in self.check_transform(data):
             logger.error(str(error))
 
         new_data = self.transform(data)
+        new_schema = schemaflow.types.infer_schema(new_data)
 
-        for error in self._check_transform_modifies(new_data):
+        for error in self._check_transform_modifies(new_schema):
             logger.error(str(error))
 
-        new_data_schema = dict((key, type(value)) for key, value in new_data.items())
-        logger.info('Ended %s.transform(%s) with %s' % (self.__class__.__name__, schema, new_data_schema))
+        logger.info('Ended %s.transform with %s' % (self.__class__.__name__, new_schema))
         return new_data
 
     def logged_fit(self, data: dict, parameters: dict = None):
