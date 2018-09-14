@@ -106,6 +106,26 @@ class Pipe:
                 exceptions.append(_exceptions.MissingRequirement(requirement))
         return exceptions
 
+    def _check_transform_modifies(self, schema: dict):
+        schema_keys = set(schema.keys())
+        required_keys = set(self.transform_modifies.keys())
+
+        exceptions = []
+        if len(required_keys - schema_keys):
+            exception = _exceptions.WrongSchema(
+                required_keys,
+                schema_keys, ['in modified data from transform'])
+            exceptions.append(exception)
+
+        for key in self.transform_modifies:
+            expected_type = self._get_type(self.transform_modifies[key])
+            if key in schema:
+                new_exceptions = expected_type.check_schema(schema[key])
+                for exception in new_exceptions:
+                    exception.locations.append('argument \'%s\' in modified data from transform' % key)
+                exceptions += new_exceptions
+        return exceptions
+
     def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
         """
         Checks that a given data has a valid schema to be used in :meth:`fit`.
@@ -239,20 +259,23 @@ class Pipe:
         Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`. Logs the intermediary
         steps using ``logging``.
 
-        :param schema: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
+        :param data: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
         :return: the new schema.
         """
-        data_schema = dict((key, type(value)) for key, value in data.items())
-        logger.info('In %s.transform(%s)' % (self.__class__.__name__, data_schema))
-        errors = self.check_transform(data)
-        for error in errors:
+        schema = dict((key, type(value)) for key, value in data.items())
+        logger.info('In %s.transform(%s)' % (self.__class__.__name__, schema))
+
+        for error in self.check_transform(data):
             logger.error(str(error))
-        transformed = self.transform(data)
-        new_data_schema = dict((key, type(value)) for key, value in data.items())
-        for error in errors:
+
+        new_data = self.transform(data)
+
+        for error in self._check_transform_modifies(new_data):
             logger.error(str(error))
-        logger.info('Ended %s.transform(%s) with %s' % (self.__class__.__name__, data_schema, new_data_schema))
-        return transformed
+
+        new_data_schema = dict((key, type(value)) for key, value in new_data.items())
+        logger.info('Ended %s.transform(%s) with %s' % (self.__class__.__name__, schema, new_data_schema))
+        return new_data
 
     def logged_fit(self, data: dict, parameters: dict = None):
         """
