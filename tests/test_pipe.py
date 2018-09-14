@@ -182,7 +182,7 @@ class TestPipe(unittest.TestCase):
 
         self.assertEqual(p.transform_schema({'x': types.List(float)}), {
             'x': types.List(float),
-            'model': types._LiteralType(object)})
+            'model': object})
 
         with self.assertRaises(exceptions.WrongSchema) as e:
             p.transform_schema({'y': types.List(float)})

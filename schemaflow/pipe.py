@@ -194,8 +194,6 @@ class Pipe:
             if isinstance(value, schemaflow.ops.Operation):
                 schema = value.transform(key, schema)
             else:
-                if not isinstance(value, schemaflow.types.Type):
-                    value = schemaflow.types._LiteralType(value)
                 schema[key] = value
         return schema
 
