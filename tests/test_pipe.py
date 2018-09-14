@@ -64,6 +64,11 @@ class Pipe(pipe.Pipe):
         return data
 
 
+class TestRequirements(unittest.TestCase):
+    def test_basic(self):
+        self.assertEqual(Pipe().check_requirements, [])
+
+
 class TestPipe(unittest.TestCase):
 
     def setUp(self):

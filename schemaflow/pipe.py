@@ -112,21 +112,20 @@ class Pipe:
         return type
 
     @property
-    def requirements_fulfilled(self):
+    def check_requirements(self):
         """
         Checks for requirements.
 
         :return: a list of exceptions with missing requirements
         """
         requirements = self.requirements
-        for value_type in self.fit_data.values():
-            requirements = requirements.union(value_type.requirements)
-        for value_type in self.transform_data.values():
-            requirements = requirements.union(value_type.requirements)
-        for value_type in self.fit_parameters.values():
-            requirements = requirements.union(value_type.requirements)
-        for value_type in self.fitted_parameters.values():
-            requirements = requirements.union(value_type.requirements)
+
+        all_types = list(self.fit_data.values()) + list(self.transform_data.values()) + \
+                    list(self.fit_parameters.values()) + list(self.fitted_parameters.values())
+
+        for value_type in all_types:
+            if isinstance(all_types, schemaflow.types.Type):
+                requirements = requirements.union(value_type.requirements)
 
         exceptions = []
         for requirement in requirements:

@@ -1,5 +1,4 @@
 import datetime
-import importlib.util
 
 import schemaflow.exceptions as _exceptions
 
@@ -12,19 +11,6 @@ class Type:
     package requirements (e.g. `numpy`).
     """
     requirements = {}  #: set of packages required for this type to be usable.
-
-    @classmethod
-    @property
-    def requirements_fulfilled(cls):
-        """
-        Returns whether this Type has its requirements fulfilled.
-
-        :return: bool
-        """
-        for requirement in cls.requirements:
-            if importlib.util.find_spec(requirement) is None:
-                return False
-        return True
 
     def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
