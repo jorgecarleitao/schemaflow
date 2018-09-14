@@ -10,6 +10,34 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def _check_schema_keys(schema: dict, expected: dict, error_location: list, raise_: bool=False):
+    schema_keys = set(schema.keys())
+    required_keys = set(expected.keys())
+
+    exceptions = []
+    if len(required_keys - schema_keys):
+        exception = _exceptions.WrongSchema(required_keys, schema_keys, error_location)
+        if raise_:
+            raise exception
+        exceptions.append(exception)
+    return exceptions
+
+
+def _check_schema_types(schema: dict, expected: dict, error_location: str, raise_: bool=False):
+    exceptions = []
+    for key, expected_type in expected.items():
+        if key in schema:
+            try:
+                new_exceptions = expected_type.check_schema(schema[key], raise_)
+            except _exceptions.SchemaFlowError as e:
+                e.locations.append(error_location % key)
+                raise e
+            for exception in new_exceptions:
+                exception.locations.append(error_location % key)
+            exceptions += new_exceptions
+    return exceptions
+
+
 class Pipe:
     """
     The base class of all pipes. This class represents a stateful data transformation.
@@ -107,23 +135,11 @@ class Pipe:
         return exceptions
 
     def _check_transform_modifies(self, schema: dict):
-        schema_keys = set(schema.keys())
-        required_keys = set(self.transform_modifies.keys())
+        exceptions = _check_schema_keys(schema, self.transform_modifies, ['in modified data from transform'])
 
-        exceptions = []
-        if len(required_keys - schema_keys):
-            exception = _exceptions.WrongSchema(
-                required_keys,
-                schema_keys, ['in modified data from transform'])
-            exceptions.append(exception)
+        expected_schema = {key: self._get_type(value) for key, value in self.transform_modifies.items()}
+        exceptions += _check_schema_types(schema, expected_schema, 'in argument \'%s\' of modified data from transform')
 
-        for key in self.transform_modifies:
-            expected_type = self._get_type(self.transform_modifies[key])
-            if key in schema:
-                new_exceptions = expected_type.check_schema(schema[key])
-                for exception in new_exceptions:
-                    exception.locations.append('argument \'%s\' in modified data from transform' % key)
-                exceptions += new_exceptions
         return exceptions
 
     def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
@@ -138,25 +154,10 @@ class Pipe:
         if parameters is None:
             parameters = {}
 
-        exceptions = []
+        exceptions = _check_schema_keys(data, self.fit_data, ['in fit'], raise_)
 
-        data_keys = set(data.keys())
-        required_keys = set(self.fit_data.keys())
-        if len(required_keys - data_keys):
-            exception = _exceptions.WrongSchema(
-                required_keys,
-                data_keys, ['in fit'])
-            if raise_:
-                raise exception
-            exceptions.append(exception)
-
-        for key in self.fit_data:
-            expected_type = self._get_type(self.fit_data[key])
-            if key in data:
-                new_exceptions = expected_type.check_schema(data[key])
-                for exception in new_exceptions:
-                    exception.locations.append('argument \'%s\' in fit' % key)
-                exceptions += new_exceptions
+        expected_schema = {key: self._get_type(value) for key, value in self.fit_data.items()}
+        exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of fit', raise_)
 
         # check that parameters are correct
         parameters_keys = set(parameters.keys())
@@ -169,17 +170,8 @@ class Pipe:
                 raise exception
             exceptions.append(exception)
 
-        for key in self.fit_parameters:
-            expected_type = self._get_type(self.fit_parameters[key])
-            if key in parameters:
-                try:
-                    new_exceptions = expected_type.check_schema(parameters[key], raise_)
-                except _exceptions.SchemaFlowError as e:
-                    e.locations.append('in parameter \'%s\' of fit' % key)
-                    raise e
-                for exception in new_exceptions:
-                    exception.locations.append('in parameter \'%s\' of fit' % key)
-                exceptions += new_exceptions
+        expected_schema = {key: self._get_type(value) for key, value in self.fit_parameters.items()}
+        exceptions += _check_schema_types(parameters, expected_schema, 'in parameter \'%s\' of fit', raise_)
 
         return exceptions
 
@@ -191,29 +183,10 @@ class Pipe:
         :param raise_: whether it should raise the first found exception or list them all (default: list them)
         :return: a list of (subclasses of) :class:`schemaflow.exceptions.SchemaFlowError` with all missing arguments.
         """
-        exceptions = []
+        exceptions = _check_schema_keys(data, self.transform_data, ['in transform'], raise_)
 
-        data_keys = set(data.keys())
-        required_keys = set(self.transform_data.keys())
-        if len(required_keys - data_keys):
-            exception = _exceptions.WrongSchema(
-                required_keys,
-                data_keys, ['in transform'])
-            if raise_:
-                raise exception
-            exceptions.append(exception)
-
-        for key in self.transform_data:
-            expected_type = self._get_type(self.transform_data[key])
-            if key in data:
-                try:
-                    new_exceptions = expected_type.check_schema(data[key], raise_)
-                except _exceptions.SchemaFlowError as e:
-                    e.locations.append('in argument \'%s\' of transform' % key)
-                    raise e
-                for exception in new_exceptions:
-                    exception.locations.append('in argument \'%s\' of transform' % key)
-                exceptions += new_exceptions
+        expected_schema = {key: self._get_type(value) for key, value in self.transform_data.items()}
+        exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of transform', raise_)
         return exceptions
 
     def _transform_schema(self, schema: dict):
