@@ -101,7 +101,7 @@ class JoinCategoricalAsOneHot(Pipe):
 
 
 class BaselineModel(Pipe):
-    fit_data = {'x': sf_types.Array(np.float64)}
+    fit_data = {'x': sf_types.PandasDataFrame({})}
     transform_modifies = {'y_pred_baseline': sf_types.Array(np.float64)}
 
     fitted_parameters = {'mean': np.float64}
@@ -116,7 +116,7 @@ class BaselineModel(Pipe):
 
 class LogLassoModel(Pipe):
     transform_data = {'x': sf_types.PandasDataFrame(schema={})}
-    fit_data = {'x': sf_types.PandasDataFrame(schema={}), 'y': sf_types.PandasDataFrame(schema={})}
+    fit_data = {'x': sf_types.PandasDataFrame(schema={}), 'y': sf_types.Array(float)}
     transform_modifies = {
         'y_pred': sf_types.Array(np.float64),
         'x': sf_ops.Drop()
@@ -144,9 +144,9 @@ def analyse_performance(df, target_column, pipeline, parameters: dict=None):
     x_train, y_train = x_y_split(train, target_column)
     x_test, y_test = x_y_split(test, target_column)
 
-    pipeline.fit({'x': x_train, 'y': y_train.values}, parameters)
+    pipeline.logged_fit({'x': x_train, 'y': y_train.values}, parameters)
 
-    result = pipeline.transform({'x': x_test})
+    result = pipeline.logged_transform({'x': x_test})
 
     y_pred = result['y_pred']
     y_pred_baseline = result['y_pred_baseline']
