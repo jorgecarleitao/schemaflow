@@ -33,20 +33,20 @@ def _check_schema_types(schema: dict, expected: dict, error_location: str, raise
 
 class Pipe:
     """
-    The base class of all pipes. This class represents a stateful data transformation.
+    A Pipe represents a stateful data transformation.
 
     Data in this context consists of a Python dictionary whose each value is a type with some representation of data,
     either in-memory (e.g. ``float``, ``pandas.DataFrame``) of remote (e.g. ``pyspark.sql.DataFrame``, ``sqlalchemy``).
 
     A :class:`Pipe` is defined by:
 
-    - a function :meth:`transform` that:
+    - a method :meth:`transform` that:
 
         - uses the keys :attr:`transform_modifies` from ``data``
         - uses the :attr:`state`
         - modifies the keys in :attr:`transform_modifies` in ``data``
 
-    - a function :meth:`fit` that:
+    - a method :meth:`fit` that:
 
         - uses (training) keys :attr:`fit_requires` from ``data``
         - uses (passed) :attr:`fit_parameters`

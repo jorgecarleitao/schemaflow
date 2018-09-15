@@ -117,25 +117,16 @@ Use it when you are fairly certain that:
 * the data transforms are expensive (e.g. Spark, Hive, SQL)
 * your data pipeline aims to be maintainable and reusable (e.g. production code)
 
-What is a pipeline?
-^^^^^^^^^^^^^^^^^^^
+Pipe
+----
 
-A :class:`~schemaflow.pipeline.Pipeline` represents a sequence of *stateful transformations*
-(each a :class:`~schemaflow.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
-into another set of data (e.g. pandas DFs and a ML model).
-"Stateful" here represents the concept that pipes can have parameters computed from training data.
-
+.. automodule:: schemaflow.pipe
+   :members:
 
 Pipeline
 --------
 
 .. automodule:: schemaflow.pipeline
-   :members:
-
-Pipe
-----
-
-.. automodule:: schemaflow.pipe
    :members:
 
 Types

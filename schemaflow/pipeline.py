@@ -11,7 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 class Pipeline(schemaflow.pipe.Pipe):
     """
-    A linear sequence of :class:`~schemaflow.pipe.Pipe`'s that operate in sequence.
+    A list of :class:`~schemaflow.pipe.Pipe`'s that are applied sequentially.
 
     :class:`~schemaflow.pipeline.Pipeline` is a :class:`~schemaflow.pipe.Pipe` and can be part of
     another :class:`~schemaflow.pipeline.Pipeline`.
