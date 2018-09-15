@@ -5,59 +5,19 @@ Schematic data pipelines in Python
    :maxdepth: 2
    :caption: Contents:
 
-Introduction
-------------
-
-This is a package to write robust pipelines for data science and data engineering in Python.
+This is a package to write robust pipelines for data science and data engineering in Python 3.
 Thanks for checking it out.
 
-The pipelines written in schemaflow's API are aware of how they change the underlying schema of the data that comes in.
-This implies that you have a great balance between freedom to use generic data representations
-(e.g. pyspark, Pandas, H2O, sklearn) but also great control on how the data schema is flowing through the pipeline.
-
-When to use this package
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Use it when you are fairly certain that:
-
-* there is the need for a complex data pipeline (e.g. more than 1 data source and different data types)
-* the data transforms are expensive (e.g. Spark, Hive, SQL)
-* your data pipeline aims to be maintainable and reusable (e.g. production code)
-
-What is a pipeline?
-^^^^^^^^^^^^^^^^^^^
-
-A :class:`~schemaflow.pipeline.Pipeline` represents a sequence of *stateful transformations*
-(each a :class:`~schemaflow.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
-into another set of data (e.g. pandas DFs and a ML model).
-"Stateful" here represents the concept that pipes can have parameters computed from training data.
-
-The problem that this abstraction solves
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 A major challenge in creating a robust data pipeline is guaranteeing interoperability between
-pipes. I.e. how do we guarantee that the pipe that someone wrote is compatible
-with your pipe?
+pipes. Data transformations often change the underlying data representation (e.g. change column type,
+add columns, convert PySpark DataFrame to Pandas or H2O DataFrames). This makes it difficult to track
+what exactly is going on at a certain point of the pipeline, which often requires running the whole pipeline
+until that point to debug a certain pipe.
 
-There are 2 common ways to address this:
+This package declares a simple API to define data transformations that know what schema they require to run,
+what schema they return, and what states they depend on.
 
-1. Run the whole thing and hope that it runs
-2. Read the pipe's source code and understand how to use it and what it expects
-
-The problem of option 1. is that we face a halting problem: we may need to wait a large amount of time
-(e.g. Spark jobs to be executed) to conclude whether the whole thing runs. This is the ultimate test,
-but takes development time.
-
-The problem of option 2. is that unless there is an agreement on how to write the pipes, different authors will have
-different conventions and different ways to building the pipe.
-
-The solution this package adopts
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This package declares a simple interface to define a stateful data transformation that gives the developer
-the opportunity to declare what comes in, what comes out, and what states are modified.
-
-Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe` as follows:
+Under this API, you define a :class:`~schemaflow.pipe.Pipe` as follows (an example):
 
 .. code-block:: python
 
@@ -67,24 +27,21 @@ Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe
     class MyPipe(pipe.Pipe):
         requirements = {'sklearn'}
 
-        # schema required by fit (supervised learning)
         fit_requires = {
             # (arbitrary items, arbitrary features)
             'x': types.Array(np.float64, shape=(None, None)),
             'y': types.List(float)
         }
 
-        # schema required by transform
         transform_requires = {
             'x': types.List(float)
         }
 
-        # parameter passed to fit()
         fit_parameters = {
             'gamma': float
         }
 
-        # parameter assigned in fit()
+        # parameter assigned in fit; the pipe's state
         fitted_parameters = {
             'a': float
         }
@@ -111,7 +68,7 @@ Without reading nor executing ``fit`` and ``transform``, we know how ``data`` wi
 This allows to check whether a ``Pipeline`` is consistent **without** executing
 ``fit`` or ``transform`` of *any* pipe.
 
-Specifically, you can execute the pipe using
+Specifically, you can execute the pipe using the traditional fit-transform idiom,
 
 .. code-block:: python
 
@@ -119,7 +76,7 @@ Specifically, you can execute the pipe using
     p.fit(train_data, {'gamma': 1.0})
     result = p.transform(test_data)
 
-and check whether the data format that you pass is consistent using
+but also check whether the data format that you pass is consistent with its requirements:
 
 .. code-block:: python
 
@@ -132,8 +89,8 @@ and check whether the data format that you pass is consistent using
 
 which does not execute ``fit`` nor ``transform``.
 
-When we have multiple pipes (which themselves can be pipelines), a good overview of how
-the data schema flows is key. By using **Schemaflow**'s API, you get this for free:
+The biggest advantage of this declaration is that when the pipes are used within a pipeline,
+**Schemaflow** can compute how the schema flows and therefore know the schema flow of a Pipeline:
 
 .. code-block:: python
 
@@ -149,7 +106,25 @@ the data schema flows is key. By using **Schemaflow**'s API, you get this for fr
     print(p.transform_modifies)
 
 I.e. because we know how each Pipe modifies the schema, we can compute how the schema flows through it and
-therefore obtain what are the dependencies of ``p``, and what it transforms.
+therefore obtain what are the dependencies of ``p`` and what it transforms.
+
+When to use this package
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use it when you are fairly certain that:
+
+* there is the need for a complex data pipeline (e.g. more than 1 data source and different data types)
+* the data transforms are expensive (e.g. Spark, Hive, SQL)
+* your data pipeline aims to be maintainable and reusable (e.g. production code)
+
+What is a pipeline?
+^^^^^^^^^^^^^^^^^^^
+
+A :class:`~schemaflow.pipeline.Pipeline` represents a sequence of *stateful transformations*
+(each a :class:`~schemaflow.pipe.Pipe`) that convert a generic set of data (e.g. spark DFs and constants)
+into another set of data (e.g. pandas DFs and a ML model).
+"Stateful" here represents the concept that pipes can have parameters computed from training data.
+
 
 Pipeline
 --------
