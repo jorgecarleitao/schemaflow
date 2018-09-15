@@ -1,13 +1,6 @@
-import logging
-import importlib.util
-
 import schemaflow.types
 import schemaflow.ops
 import schemaflow.exceptions as _exceptions
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def _check_schema_keys(schema: dict, expected: dict, error_location: list, raise_: bool=False):
@@ -105,12 +98,6 @@ class Pipe:
             raise _exceptions.NotFittedError(self, key)
         return self.state.__getitem__(key)
 
-    @staticmethod
-    def _get_type(type):
-        if not isinstance(type, schemaflow.types.Type):
-            type = schemaflow.types._LiteralType(type)
-        return type
-
     @property
     def check_requirements(self):
         """
@@ -123,21 +110,19 @@ class Pipe:
         all_types = list(self.fit_data.values()) + list(self.transform_data.values()) + \
                     list(self.fit_parameters.values()) + list(self.fitted_parameters.values())
 
-        for value_type in all_types:
-            if isinstance(all_types, schemaflow.types.Type):
-                requirements = requirements.union(value_type.requirements)
-
         exceptions = []
-        for requirement in requirements:
-            if importlib.util.find_spec(requirement) is None:
-                exceptions.append(_exceptions.MissingRequirement(requirement))
+        for value_type in all_types:
+            if isinstance(value_type, schemaflow.types.Type) and not value_type.requirements_fulfilled():
+                exceptions.append(_exceptions.MissingRequirement(value_type.requirements))
         return exceptions
 
-    def _check_transform_modifies(self, schema: dict):
-        exceptions = _check_schema_keys(schema, self.transform_modifies, ['in modified data from transform'])
+    def check_transform_modifies(self, input_schema: dict, output_schema: dict):
+        expected_schema = self._transform_schema(input_schema.copy())
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in expected_schema.items()}
 
-        expected_schema = {key: self._get_type(value) for key, value in self.transform_modifies.items()}
-        exceptions += _check_schema_types(schema, expected_schema, 'in argument \'%s\' of modified data from transform')
+        exceptions = _check_schema_keys(output_schema, expected_schema, ['in modified data from transform'])
+
+        exceptions += _check_schema_types(output_schema, expected_schema, 'in result \'%s\' of modified data from transform')
 
         return exceptions
 
@@ -155,7 +140,7 @@ class Pipe:
 
         exceptions = _check_schema_keys(data, self.fit_data, ['in fit'], raise_)
 
-        expected_schema = {key: self._get_type(value) for key, value in self.fit_data.items()}
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.fit_data.items()}
         exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of fit', raise_)
 
         # check that parameters are correct
@@ -169,7 +154,7 @@ class Pipe:
                 raise exception
             exceptions.append(exception)
 
-        expected_schema = {key: self._get_type(value) for key, value in self.fit_parameters.items()}
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.fit_parameters.items()}
         exceptions += _check_schema_types(parameters, expected_schema, 'in parameter \'%s\' of fit', raise_)
 
         return exceptions
@@ -184,16 +169,19 @@ class Pipe:
         """
         exceptions = _check_schema_keys(data, self.transform_data, ['in transform'], raise_)
 
-        expected_schema = {key: self._get_type(value) for key, value in self.transform_data.items()}
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.transform_data.items()}
         exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of transform', raise_)
         return exceptions
 
     def _transform_schema(self, schema: dict):
         for key, value in self.transform_modifies.items():
-            if isinstance(value, schemaflow.ops.Operation):
-                schema = value.transform(key, schema)
-            else:
-                schema[key] = value
+            if not isinstance(value, list):
+                value = [value]
+            for transformation in value:
+                if isinstance(transformation, schemaflow.ops.Operation):
+                    schema = transformation.transform(key, schema)
+                else:
+                    schema[key] = transformation
         return schema
 
     def transform_schema(self, schema: dict):
@@ -223,40 +211,3 @@ class Pipe:
         :return: the modified data
         """
         return data
-
-    def logged_transform(self, data: dict):
-        """
-        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`. Logs the intermediary
-        steps using ``logging``.
-
-        :param data: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
-        :return: the new schema.
-        """
-        schema = schemaflow.types.infer_schema(data)
-        logger.info('In %s.transform(%s)' % (self.__class__.__name__, schema))
-
-        for error in self.check_transform(data):
-            logger.error(str(error))
-
-        new_data = self.transform(data)
-        new_schema = schemaflow.types.infer_schema(new_data)
-
-        for error in self._check_transform_modifies(new_schema):
-            logger.error(str(error))
-
-        logger.info('Ended %s.transform with %s' % (self.__class__.__name__, new_schema))
-        return new_data
-
-    def logged_fit(self, data: dict, parameters: dict = None):
-        """
-        Modifies the instance's :attr:`state`. Logs the intermediary steps using ``logging``.
-
-        :param data: a dictionary of pairs ``(str, object)``.
-        :param parameters: a dictionary of pairs ``(str, object)``.
-        :return: ``None``
-        """
-        data_schema = dict((key, type(value)) for key, value in data.items())
-        logger.info('In %s.fit(%s)' % (self.__class__.__name__, data_schema))
-        self.fit(data, parameters)
-        state_schema = dict((key, type(value)) for key, value in self.state.items())
-        logger.info('Ended %s.fit(%s) with %s' % (self.__class__.__name__, data_schema, state_schema))

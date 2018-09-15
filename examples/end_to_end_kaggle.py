@@ -63,8 +63,8 @@ class JoinCategoricalAsOneHot(Pipe):
         'x_categorical': sf_types.PandasDataFrame(schema={})
     }
     transform_modifies = {
+        'x': sf_types.PandasDataFrame(schema={}),
         'x_categorical': sf_ops.Drop(),
-        'x': sf_types.PandasDataFrame(schema={})
     }
 
     fitted_parameters = {'label': object, 'one_hot': object}
@@ -101,7 +101,8 @@ class JoinCategoricalAsOneHot(Pipe):
 
 
 class BaselineModel(Pipe):
-    fit_data = {'x': sf_types.PandasDataFrame({})}
+    fit_data = transform_data = {'x': sf_types.PandasDataFrame({})}
+
     transform_modifies = {'y_pred_baseline': sf_types.Array(np.float64)}
 
     fitted_parameters = {'mean': np.float64}
@@ -193,6 +194,15 @@ if __name__ == '__main__':
         ('baseline', BaselineModel()),
         ('model', LogLassoModel())
     ])
+
+    import logging
+    import sys
+
+    logger = logging.getLogger('schemaflow')
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(ch)
 
     # this pipeline is very generic: it does not make any assumptions about the data's format.
     predict_pipeline.check_fit({'x': sf_types.PandasDataFrame({}), 'y': sf_types.Array(np.float64)}, raise_=True)

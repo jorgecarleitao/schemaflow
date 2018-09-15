@@ -33,8 +33,7 @@ class Drop(Operation):
     Declares an operation that drops an existing schema key.
     """
     def transform(self, key, schema):
-        del schema[key]
-        return schema
+        return {k: value for k, value in schema.items() if k != key}
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
@@ -48,10 +47,10 @@ class ModifyDataFrame(Operation):
         self.ops = ops
 
     def transform(self, key, schema):
-        current_schema = schema.get(key, schemaflow.types._DataFrame({}))
+        instance = schema.get(key, schemaflow.types._DataFrame({}))
+
         for column, op in self.ops.items():
-            current_schema = op.transform(column, current_schema)
-        schema[key] = current_schema
+            instance.schema = op.transform(column, instance.schema)
         return schema
 
     def __repr__(self):

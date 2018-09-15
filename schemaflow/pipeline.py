@@ -1,7 +1,12 @@
 import collections
+import logging
 
 import schemaflow.pipe
+import schemaflow.types
 import schemaflow.exceptions as _exceptions
+
+logger = logging.getLogger('schemaflow')
+logger.setLevel(logging.DEBUG)
 
 
 class Pipeline(schemaflow.pipe.Pipe):
@@ -135,7 +140,7 @@ class Pipeline(schemaflow.pipe.Pipe):
                 else:
                     errors += pipe.check_fit(data, {}, raise_)
             except _exceptions.SchemaFlowError as e:
-                e.locations.append('in fit of %s of %s' % (key, self.__class__.__name__))
+                e.locations.append('of pipe \'%s\' of %s' % (key, self.__class__.__name__))
                 raise e
             data = pipe.transform_schema(data)
         return errors
@@ -150,7 +155,7 @@ class Pipeline(schemaflow.pipe.Pipe):
             try:
                 pipe.check_transform(schema, True)
             except _exceptions.SchemaFlowError as e:
-                e.locations.append('in transform of %s of %s' % (key, self.__class__.__name__))
+                e.locations.append('of pipe \'%s\' of %s' % (key, self.__class__.__name__))
                 raise e
             schema = pipe.transform_schema(schema)
         return schema
@@ -167,3 +172,55 @@ class Pipeline(schemaflow.pipe.Pipe):
             else:
                 pipe.fit(data)
             data = pipe.transform(data)
+
+    def _logged_transform(self, key, data):
+        input_schema = schemaflow.types.infer_schema(data)
+        logger.info('Started transform \'%s\' (%s): %s' % (key, self.pipes[key].__class__.__name__, input_schema))
+
+        for error in self.pipes[key].check_transform(input_schema):
+            error.locations.append('in %s' % key)
+            logger.error(str(error))
+
+        data = self.pipes[key].transform(data)
+        output_schema = schemaflow.types.infer_schema(data)
+
+        for error in self.pipes[key].check_transform_modifies(input_schema.copy(), output_schema):
+            error.locations.append('in %s' % key)
+            logger.error(str(error))
+
+        logger.info('Ended   transform \'%s\' (%s): %s' % (key, self.pipes[key].__class__.__name__, output_schema))
+        return data
+
+    def logged_transform(self, data: dict):
+        """
+        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`. Logs the intermediary
+        steps using ``logging``.
+
+        :param data: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
+        :return: the new schema.
+        """
+        for key in self.pipes:
+            data = self._logged_transform(key, data)
+        return data
+
+    def logged_fit(self, data: dict, parameters: dict = None):
+        """
+        Modifies the instance's :attr:`state`. Logs the intermediary steps using ``logging``.
+
+        :param data: a dictionary of pairs ``(str, object)``.
+        :param parameters: a dictionary of pairs ``(str, object)``.
+        :return: ``None``
+        """
+        if parameters is None:
+            parameters = {}
+        for key, pipe in self.pipes.items():
+            schema = schemaflow.types.infer_schema(data)
+            logger.info('Started fit \'%s\' (%s): %s' % (key, self.pipes[key].__class__.__name__, schema))
+
+            if key in parameters:
+                pipe.fit(data, parameters[key])
+            else:
+                pipe.fit(data)
+            state_schema = dict((key, type(value)) for key, value in pipe.state.items())
+            logger.info('Ended   fit \'%s\' (%s): state=%s' % (key, self.pipes[key].__class__.__name__, state_schema))
+            data = self._logged_transform(key, data)

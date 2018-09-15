@@ -1,4 +1,5 @@
 import unittest
+import logging
 import collections
 
 from schemaflow.pipeline import Pipeline
@@ -126,11 +127,11 @@ class TestPipeline(unittest.TestCase):
 
         with self.assertRaises(exceptions.WrongSchema) as e:
             p.transform_schema({'y': types.List(str)})
-        self.assertIn('in transform in step 0 of Pipeline', str(e.exception))
+        self.assertIn('in transform of pipe \'0\' of Pipeline', str(e.exception))
 
         with self.assertRaises(exceptions.WrongSchema) as e:
             p.transform_schema({'x': types.List(str)})
-        self.assertIn('in transform in step 1 of Pipeline', str(e.exception))
+        self.assertIn('in transform of pipe \'1\' of Pipeline', str(e.exception))
 
     def test_two_fit_data(self):
         # P4 fit-needs 'x1', P2 fit-needs 'x' (float) => fit_data needs both on its first type-occurrence
@@ -141,3 +142,46 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(p.fit_data, {'x': types.List(str), 'x1': types.List(float)})
 
         self.assertEqual(p.transform_modifies, {'x': types.List(float)})
+
+
+class MockLoggingHandler(logging.Handler):
+    """Mock logging handler to check for expected logs."""
+    # see https://stackoverflow.com/a/1049375/931303
+
+    def __init__(self, *args, **kwargs):
+        self.messages = {
+            'debug': [],
+            'info': [],
+            'warning': [],
+            'error': [],
+            'critical': [],
+        }
+        logging.Handler.__init__(self, *args, **kwargs)
+
+    def emit(self, record):
+        self.messages[record.levelname.lower()].append(record.getMessage())
+
+
+class TestPipelineLogging(unittest.TestCase):
+
+    def setUp(self):
+        logger = logging.getLogger('schemaflow')
+        self._handler = MockLoggingHandler()
+        logger.addHandler(self._handler)
+
+    def tearDown(self):
+        logging.getLogger().removeHandler(self._handler)
+
+    def test_logged(self):
+        p = Pipeline([Pipe1(), Pipe2()])
+
+        p.logged_fit({'x': ['1', '2', '3']}, {'1': {'unused': 1.0}})
+        self.assertEqual(self._handler.messages['error'], [])
+        self.assertEqual(len(self._handler.messages['info']), 8)
+
+        result = p.logged_transform({'x': ['1', '2', '3']})
+        self.assertEqual(self._handler.messages['error'], [])
+        self.assertEqual(len(self._handler.messages['info']), 8 + 4)
+
+        # std([1,2,3]) == 0.816496580927726
+        self.assertEqual(result['x'], [-1.2247448713915887, 0.0, 1.2247448713915887])

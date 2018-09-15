@@ -1,4 +1,5 @@
 import datetime
+import importlib.util
 
 import schemaflow.exceptions as _exceptions
 
@@ -9,8 +10,8 @@ def _all_subclasses(cls):
 
 
 def infer_schema(data: dict):
-    subclasses = (subclass for subclass in _all_subclasses(Type)
-                  if subclass.requirements_fulfilled and not subclass.__name__.startswith('_'))
+    subclasses = list(subclass for subclass in _all_subclasses(Type)
+                      if subclass.requirements_fulfilled and not subclass.__name__.startswith('_'))
 
     schema = {}
     for key, value in data.items():
@@ -21,6 +22,12 @@ def infer_schema(data: dict):
         else:
             schema[key] = type(value)
     return schema
+
+
+def _get_type(instance_type):
+    if not isinstance(instance_type, Type):
+        instance_type = _LiteralType(instance_type)
+    return instance_type
 
 
 class Type:
@@ -43,6 +50,18 @@ class Type:
     @classmethod
     def infer(cls, instance):
         raise NotImplementedError
+
+    @classmethod
+    def requirements_fulfilled(cls):
+        """
+        Returns whether this Type has its requirements fulfilled.
+
+        :return: bool
+        """
+        for requirement in cls.requirements:
+            if importlib.util.find_spec(requirement) is None:
+                return False
+        return True
 
     def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
@@ -78,6 +97,7 @@ class _LiteralType(Type):
     """
     def __init__(self, base_type):
         assert not isinstance(base_type, Type)
+        assert not isinstance(base_type, (list, tuple))
         self._base_type = base_type
 
     def __repr__(self):
@@ -215,7 +235,7 @@ class PandasDataFrame(_DataFrame):
 
     @staticmethod
     def _get_schema(instance):
-        return dict((column, column_dtype) for column, column_dtype in instance.dtypes.items())
+        return dict((column, _get_type(column_dtype)) for column, column_dtype in instance.dtypes.items())
 
 
 class _Container(Type):
@@ -293,7 +313,7 @@ class Array(_Container):
         self.shape = shape
 
     def __repr__(self):
-        return '%s(%s, %s)' % (self.__class__.__name__, self._items_type.base_type.__name__, self.shape)
+        return '%s(%s, %s)' % (self.__class__.__name__, self._items_type.base_type, self.shape)
 
     @classmethod
     def infer(cls, instance):
@@ -334,7 +354,7 @@ class Array(_Container):
         return exceptions
 
     def _is_valid_shape(self, shape):
-        if shape is not None:
+        if self.shape is not None:
             if len(shape) != len(self.shape):
                 return False
             for required_d, d in zip(self.shape, shape):
