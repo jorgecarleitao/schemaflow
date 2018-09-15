@@ -9,13 +9,13 @@ class Pipe(pipe.Pipe):
     requirements = {'sklearn'}
 
     # variables required by fit (supervised learning)
-    fit_data = {
+    fit_requires = {
         # (arbitrary items, arbitrary features)
         'x': types.Array(np.float64, shape=(None, None)),
         'y': types.List(float)
     }
 
-    transform_data = {
+    transform_requires = {
         'x': types.List(float)
     }
 

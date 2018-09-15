@@ -21,7 +21,7 @@ from schemaflow.pipeline import Pipeline
 
 
 class SplitNumericCategorical(Pipe):
-    fit_data = transform_data = {'x': sf_types.PandasDataFrame(schema={})}
+    fit_requires = transform_requires = {'x': sf_types.PandasDataFrame(schema={})}
     transform_modifies = {'x_categorical': sf_types.PandasDataFrame(schema={}),
                           'x': sf_types.PandasDataFrame(schema={})}
 
@@ -37,7 +37,7 @@ class SplitNumericCategorical(Pipe):
 
 
 class FillNaN(Pipe):
-    fit_data = transform_modifies = transform_data = {
+    fit_requires = transform_modifies = transform_requires = {
         'x': sf_types.PandasDataFrame(schema={}),
         'x_categorical': sf_types.PandasDataFrame(schema={})}
 
@@ -57,8 +57,8 @@ class FillNaN(Pipe):
 
 
 class JoinCategoricalAsOneHot(Pipe):
-    fit_data = {'x_categorical': sf_types.PandasDataFrame(schema={})}
-    transform_data = {
+    fit_requires = {'x_categorical': sf_types.PandasDataFrame(schema={})}
+    transform_requires = {
         'x': sf_types.PandasDataFrame(schema={}),
         'x_categorical': sf_types.PandasDataFrame(schema={})
     }
@@ -101,7 +101,7 @@ class JoinCategoricalAsOneHot(Pipe):
 
 
 class BaselineModel(Pipe):
-    fit_data = transform_data = {'x': sf_types.PandasDataFrame({})}
+    fit_requires = transform_requires = {'x': sf_types.PandasDataFrame({})}
 
     transform_modifies = {'y_pred_baseline': sf_types.Array(np.float64)}
 
@@ -116,8 +116,8 @@ class BaselineModel(Pipe):
 
 
 class LogLassoModel(Pipe):
-    transform_data = {'x': sf_types.PandasDataFrame(schema={})}
-    fit_data = {'x': sf_types.PandasDataFrame(schema={}), 'y': sf_types.Array(float)}
+    transform_requires = {'x': sf_types.PandasDataFrame(schema={})}
+    fit_requires = {'x': sf_types.PandasDataFrame(schema={}), 'y': sf_types.Array(float)}
     transform_modifies = {
         'y_pred': sf_types.Array(np.float64),
         'x': sf_ops.Drop()
@@ -208,11 +208,11 @@ if __name__ == '__main__':
     predict_pipeline.check_fit({'x': sf_types.PandasDataFrame({}), 'y': sf_types.Array(np.float64)}, raise_=True)
     predict_pipeline.check_transform({'x': sf_types.PandasDataFrame({})}, raise_=True)
 
-    print('expected fit schema: ', predict_pipeline.fit_data)
+    print('expected fit schema: ', predict_pipeline.fit_requires)
     print('fitted parameters: ', predict_pipeline.fitted_parameters)
 
-    print('expected transform schema: ', predict_pipeline.transform_data)
-    print('expected transformed schema: ', predict_pipeline.transform_schema(predict_pipeline.transform_data))
+    print('expected transform schema: ', predict_pipeline.transform_requires)
+    print('expected transformed schema: ', predict_pipeline.transform_schema(predict_pipeline.transform_requires))
 
     # execution of the pipeline
     target_column = 'SalePrice'

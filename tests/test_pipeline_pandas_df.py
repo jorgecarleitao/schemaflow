@@ -9,7 +9,7 @@ from schemaflow import types, ops
 
 
 class Pipe1(Pipe):
-    transform_data = {
+    transform_requires = {
         'x': types.PandasDataFrame(schema={'a': np.float64, 'b': np.float64}),
     }
 
@@ -23,7 +23,7 @@ class Pipe1(Pipe):
 
 
 class Pipe2(Pipe):
-    transform_data = {
+    transform_requires = {
         'x': types.PandasDataFrame(schema={'a': np.float64, 'b': np.float64}),
     }
 

@@ -48,13 +48,13 @@ class Pipe:
 
     - a function :meth:`fit` that:
 
-        - uses (training) keys :attr:`fit_data` from ``data``
+        - uses (training) keys :attr:`fit_requires` from ``data``
         - uses (passed) :attr:`fit_parameters`
         - modifies the keys :attr:`fitted_parameters` in :attr:`state`
 
     - a set of :attr:`requirements` (a set of package names, e.g. ``{'pandas'}``) of the transformation
 
-    All :attr:`transform_modifies` and :attr:`fit_data` have a :class:`~schemaflow.types.Type` that can
+    All :attr:`transform_modifies` and :attr:`fit_requires` have a :class:`~schemaflow.types.Type` that can
     be used to check that the Pipe's input is consistent, with
 
         - :meth:`check_fit`
@@ -72,11 +72,11 @@ class Pipe:
 
     #: the data schema required in :meth:`~fit`;
     #: a dictionary ``str``: :class:`~schemaflow.types.Type`.
-    fit_data = {}
+    fit_requires = {}
 
     #: the data schema required in :meth:`~transform`;
     #: a dictionary ``str``: :class:`~schemaflow.type.Type`.
-    transform_data = {}
+    transform_requires = {}
 
     #: parameters' schema passed to :meth:`~fit`
     fit_parameters = {}
@@ -110,7 +110,7 @@ class Pipe:
             if not schemaflow.types._requirement_fulfilled(requirement):
                 exceptions.append(_exceptions.MissingRequirement(self.__class__, requirement))
 
-        all_types = list(self.fit_data.values()) + list(self.transform_data.values()) + \
+        all_types = list(self.fit_requires.values()) + list(self.transform_requires.values()) + \
                     list(self.fit_parameters.values()) + list(self.fitted_parameters.values())
 
         for value_type in all_types:
@@ -143,9 +143,9 @@ class Pipe:
         if parameters is None:
             parameters = {}
 
-        exceptions = _check_schema_keys(data, self.fit_data, ['in fit'], raise_)
+        exceptions = _check_schema_keys(data, self.fit_requires, ['in fit'], raise_)
 
-        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.fit_data.items()}
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.fit_requires.items()}
         exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of fit', raise_)
 
         # check that parameters are correct
@@ -172,9 +172,9 @@ class Pipe:
         :param raise_: whether it should raise the first found exception or list them all (default: list them)
         :return: a list of (subclasses of) :class:`schemaflow.exceptions.SchemaFlowError` with all missing arguments.
         """
-        exceptions = _check_schema_keys(data, self.transform_data, ['in transform'], raise_)
+        exceptions = _check_schema_keys(data, self.transform_requires, ['in transform'], raise_)
 
-        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.transform_data.items()}
+        expected_schema = {key: schemaflow.types._get_type(value) for key, value in self.transform_requires.items()}
         exceptions += _check_schema_types(data, expected_schema, 'in argument \'%s\' of transform', raise_)
         return exceptions
 
