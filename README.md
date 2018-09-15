@@ -13,7 +13,7 @@ Check out the very comprehensive documentation [here](https://schemaflow.readthe
 
 A major challenge in creating a robust data pipeline is guaranteeing interoperability between
 pipes: how do we guarantee that the pipe that someone wrote is compatible
-with my pipeline *without* running the whole pipeline multiple times until I get it right?
+with others' pipe *without* running the whole pipeline multiple times until we get it right?
 
 ## The solution that this package adopts
  
@@ -32,20 +32,9 @@ or, install the latest (recommended for now):
     git clone https://github.com/jorgecarleitao/schemaflow
     cd schemaflow && pip install -e .
 
-## Run tests
-
-    pip install -r tests/requirements.txt
-    python -m unittest discover
-
-## Build documentation
-
-    pip install -r docs/requirements.txt
-    cd docs && make html && cd ..
-    open docs/build/html/index.html
-
 ## Run examples
 
-We currently provide one example that demonstrate the usage of Schemaflow's API
+We provide one example that demonstrate the usage of SchemaFlow's API
 on developing an end-to-end pipeline applied to 
 [one of Kaggle's exercises](https://www.kaggle.com/c/house-prices-advanced-regression-techniques).
 
@@ -57,7 +46,13 @@ To run it, download the data in that exercise to `examples/all/` and run
 You should see some prints to the console as well as the generation of 3 files at 
 `examples/`: two plots and one `submission.txt`.
 
-## Use cases
+## Run tests
 
-You have a hadoop cluster with csv/etc., use PySpark to process them
-and fit a model. There are multiple processing steps developed by many people.
+    pip install -r tests/requirements.txt
+    python -m unittest discover
+
+## Build documentation
+
+    pip install -r docs/requirements.txt
+    cd docs && make html && cd ..
+    open docs/build/html/index.html
