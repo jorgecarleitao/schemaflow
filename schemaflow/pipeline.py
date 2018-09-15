@@ -43,7 +43,7 @@ class Pipeline(schemaflow.pipe.Pipe):
     @property
     def fit_requires(self):
         """
-        The data schema required in :meth:`~fit` of the whole Pipeline.
+        The data schema required in :meth:`~fit`.
         """
         fit_schema = {}
         data = {}
@@ -55,7 +55,7 @@ class Pipeline(schemaflow.pipe.Pipe):
             else:
                 required_data = pipe.transform_requires
 
-            new_keys = dict((key, type) for key, type in required_data.items()
+            new_keys = dict((key, datum_type) for key, datum_type in required_data.items()
                             if key not in data and key not in fit_schema)
             fit_schema.update(new_keys)
             data = pipe._transform_schema(data)
@@ -65,14 +65,14 @@ class Pipeline(schemaflow.pipe.Pipe):
     @property
     def transform_requires(self):
         """
-        The data schema required in :meth:`~transform` of the whole Pipeline.
+        The data schema required in :meth:`~transform`.
         """
         transform_data = {}
         data = {}
         for key, pipe in self.pipes.items():
             # not in data => a previous pipe already added this key
             # not in transform_requires => previous pipe already required this key
-            new_keys = dict((key, type) for key, type in pipe.transform_requires.items()
+            new_keys = dict((key, datum_type) for key, datum_type in pipe.transform_requires.items()
                             if key not in data and key not in transform_data)
             transform_data.update(new_keys)
             data = pipe._transform_schema(data)
@@ -82,7 +82,7 @@ class Pipeline(schemaflow.pipe.Pipe):
     @property
     def transform_modifies(self):
         """
-        All the modifications that this Pipeline apply during ``transform``.
+        The schema modifications that this Pipeline apply in ``transform``.
 
         When a key is modified more than once, changes are appended as a list.
         """
@@ -221,8 +221,8 @@ class Pipeline(schemaflow.pipe.Pipe):
         Performs the same operation as :meth:`transform` while logging the schema on each intermediary step.
 
         It also logs schema inconsistencies as errors. Specifically, for each pipe, it checks if its input data
-        is consistent with its :attr:`~schemaflow.pipes.Pipe.transform_requires`, and whether its output data is consistent
-        with its :attr:`~schemaflow.pipes.Pipe.transform_modifies`.
+        is consistent with its :attr:`~schemaflow.pipes.Pipe.transform_requires`, and whether its output data
+        is consistent with its :attr:`~schemaflow.pipes.Pipe.transform_modifies`.
 
         This greatly helps the Pipeline developer to identify problems in the pipeline.
 

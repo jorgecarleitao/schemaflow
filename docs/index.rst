@@ -1,5 +1,5 @@
-Robust data pipelines in Python
-===============================
+Schematic data pipelines in Python
+==================================
 
 .. toctree::
    :maxdepth: 2
@@ -11,12 +11,16 @@ Introduction
 This is a package to write robust pipelines for data science and data engineering in Python.
 Thanks for checking it out.
 
+The pipelines written in schemaflow's API are aware of how they change the underlying schema of the data that comes in.
+This implies that you have a great balance between freedom to use generic data representations
+(e.g. pyspark, Pandas, H2O, sklearn) but also great control on how the data schema is flowing through the pipeline.
+
 When to use this package
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use it when you are fairly certain that:
 
-* there is the need for a complex data pipeline (e.g. more than 4 data sources)
+* there is the need for a complex data pipeline (e.g. more than 1 data source and different data types)
 * the data transforms are expensive (e.g. Spark, Hive, SQL)
 * your data pipeline aims to be maintainable and reusable (e.g. production code)
 
@@ -63,14 +67,14 @@ Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe
     class MyPipe(pipe.Pipe):
         requirements = {'sklearn'}
 
-        # variables required by fit (supervised learning)
+        # schema required by fit (supervised learning)
         fit_requires = {
             # (arbitrary items, arbitrary features)
             'x': types.Array(np.float64, shape=(None, None)),
             'y': types.List(float)
         }
 
-        # variables required by transform
+        # schema required by transform
         transform_requires = {
             'x': types.List(float)
         }
