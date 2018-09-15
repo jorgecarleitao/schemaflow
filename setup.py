@@ -9,8 +9,8 @@ with open(os.path.join(here, 'README.md'), 'r') as fh:
 setuptools.setup(
     name='schemaflow',
     author='Jorge C. Leitao',
-    version='0.1.0',
-    description='a package to write data pipelines for data science systematically',
+    version='0.2.0',
+    description='A package to write schema-aware data pipelines',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/jorgecarleitao/schemaflow",
