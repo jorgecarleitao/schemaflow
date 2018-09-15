@@ -191,7 +191,7 @@ class Pipe:
 
     def transform_schema(self, schema: dict):
         """
-        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`.
+        Transforms the ``schema`` into a new schema based on :attr:`~transform_modifies`.
 
         :param schema: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
         :return: the new schema.

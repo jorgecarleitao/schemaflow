@@ -91,7 +91,7 @@ Under this interface, as a developer, you define a :class:`~schemaflow.pipe.Pipe
         }
 
         def fit(self, data, parameters=None):
-            # accesses data['x'], data['y'] and parameters['a']; expects the types defined above
+            # accesses data['x'], data['y'] and parameters['gamma']; expects the types defined above
             # assigns a float to self['a']
 
         def transform(self, data):
@@ -113,7 +113,7 @@ Specifically, you can execute the pipe using
 
     p = MyPipe()
     p.fit(train_data, {'gamma': 1.0})
-    p.transform(test_data)  # modifies `test_data`
+    result = p.transform(test_data)
 
 and check whether the data format that you pass is consistent using
 
@@ -129,7 +129,7 @@ and check whether the data format that you pass is consistent using
 which does not execute ``fit`` nor ``transform``.
 
 When we have multiple pipes (which themselves can be pipelines), a good overview of how
-the data schema flows is key. **Schemaflow** helps you in this task:
+the data schema flows is key. By using **Schemaflow**'s API, you get this for free:
 
 .. code-block:: python
 
@@ -143,6 +143,9 @@ the data schema flows is key. **Schemaflow** helps you in this task:
     ])
 
     print(p.transform_modifies)
+
+I.e. because we know how each Pipe modifies the schema, we can compute how the schema flows through it and
+therefore obtain what are the dependencies of ``p``, and what it transforms.
 
 Pipeline
 --------

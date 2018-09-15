@@ -114,7 +114,8 @@ class Pipeline(schemaflow.pipe.Pipe):
     @property
     def requirements(self):
         """
-        :return: the union of all :attr:`~schemaflow.pipe.Pipe.requirements` of all pipes in the schemaflow.
+        Set of packages required by the Pipeline. The union of all
+        :attr:`~schemaflow.pipe.Pipe.requirements` of all pipes in the Pipeline.
         """
         requirements = set()
         for pipe in self.pipes.values():
@@ -158,6 +159,12 @@ class Pipeline(schemaflow.pipe.Pipe):
         return errors
 
     def transform(self, data: dict):
+        """
+        Applies each of :meth:`~schemaflow.pipe.Pipe.transform` sequentially into ``data``.
+
+        :param data: a dictionary of pairs ``str, object``.
+        :return: the transformed data.
+        """
         for key, pipe in self.pipes.items():
             data = pipe.transform(data)
         return data
@@ -174,7 +181,13 @@ class Pipeline(schemaflow.pipe.Pipe):
 
     def fit(self, data: dict, parameters: dict=None):
         """
-        Fits all pipes in sequence.
+        Fits the :attr:`pipes` in sequence: ``p1.fit``, ``p1.transform``, ``p2.fit``, ``p2.transform``,
+        ..., ``pN.transform``.
+
+        :param data: a dictionary of pairs ``(str, object)``.
+        :param parameters: a dictionary ``{pipe_name: {str: object}}``, where each of its value is the parameters
+            to be passed to the respective's pipe named ``pipe_name``.
+        :return: ``None``
         """
         if parameters is None:
             parameters = {}
@@ -205,11 +218,16 @@ class Pipeline(schemaflow.pipe.Pipe):
 
     def logged_transform(self, data: dict):
         """
-        Transforms the ``schema`` into the new schema based on :attr:`~transform_modifies`. Logs the intermediary
-        steps using ``logging``.
+        Performs the same operation as :meth:`transform` while logging the schema on each intermediary step.
+
+        It also logs schema inconsistencies as errors. Specifically, for each pipe, it checks if its input data
+        is consistent with its :attr:`~schemaflow.pipes.Pipe.transform_data`, and whether its output data is consistent
+        with its :attr:`~schemaflow.pipes.Pipe.transform_modifies`.
+
+        This greatly helps the Pipeline developer to identify problems in the pipeline.
 
         :param data: a dictionary of pairs ``str`` :class:`~schemaflow.types.Type`.
-        :return: the new schema.
+        :return: the transformed data.
         """
         for key in self.pipes:
             data = self._logged_transform(key, data)
@@ -217,7 +235,13 @@ class Pipeline(schemaflow.pipe.Pipe):
 
     def logged_fit(self, data: dict, parameters: dict = None):
         """
-        Modifies the instance's :attr:`state`. Logs the intermediary steps using ``logging``.
+        Performs the same operation as :meth:`fit` while logging the schema on each intermediary step.
+
+        It also logs schema inconsistencies as errors. Specifically, for each pipe, it checks if its input data
+        is consistent with its :attr:`~schemaflow.pipes.Pipe.fit_data`, and whether its state changes is consistent
+        with its :attr:`~schemaflow.pipes.Pipe.fitted_parameters`.
+
+        This greatly helps the Pipeline developer to identify problems in the pipeline.
 
         :param data: a dictionary of pairs ``(str, object)``.
         :param parameters: a dictionary of pairs ``(str, object)``.
