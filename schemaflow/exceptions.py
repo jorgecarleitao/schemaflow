@@ -26,8 +26,9 @@ class MissingRequirement(SchemaFlowError):
     """
     :class:`~schemaflow.exceptions.SchemaFlowError` raised when a requirement is missing
     """
-    def __init__(self, requirement, locations: list=None):
+    def __init__(self, object_type: type, requirement: str, locations: list=None):
         super().__init__(locations)
+        self.object_type = object_type
         self.requirement = requirement
 
 
@@ -68,7 +69,7 @@ class WrongType(SchemaFlowError):
     def __str__(self):
         return 'Wrong type %s:'\
                 '\nRequired type: %s\nPassed type:   %s' % \
-               (' '.join(self.locations), self.expected_type, self.expected_type)
+               (' '.join(self.locations), self.expected_type, self.base_type)
 
 
 class WrongShape(SchemaFlowError):

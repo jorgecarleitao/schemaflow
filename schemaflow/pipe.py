@@ -105,15 +105,20 @@ class Pipe:
 
         :return: a list of exceptions with missing requirements
         """
-        requirements = self.requirements
+        exceptions = []
+        for requirement in self.requirements:
+            if not schemaflow.types._requirement_fulfilled(requirement):
+                exceptions.append(_exceptions.MissingRequirement(self.__class__, requirement))
 
         all_types = list(self.fit_data.values()) + list(self.transform_data.values()) + \
                     list(self.fit_parameters.values()) + list(self.fitted_parameters.values())
 
-        exceptions = []
         for value_type in all_types:
-            if isinstance(value_type, schemaflow.types.Type) and not value_type.requirements_fulfilled():
-                exceptions.append(_exceptions.MissingRequirement(value_type.requirements))
+            if isinstance(value_type, schemaflow.types.Type):
+                for requirement in value_type.requirements:
+                    if not schemaflow.types._requirement_fulfilled(requirement):
+                        exceptions.append(_exceptions.MissingRequirement(value_type.__class__, requirement))
+
         return exceptions
 
     def check_transform_modifies(self, input_schema: dict, output_schema: dict):

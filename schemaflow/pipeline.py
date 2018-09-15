@@ -117,15 +117,20 @@ class Pipeline(schemaflow.pipe.Pipe):
         :return: the union of all :attr:`~schemaflow.pipe.Pipe.requirements` of all pipes in the schemaflow.
         """
         requirements = set()
-        for pipe in self.pipes:
+        for pipe in self.pipes.values():
             requirements = requirements.union(pipe.requirements)
         return requirements
 
     def check_transform(self, data: dict=None, raise_: bool=False):
         errors = []
         for key, pipe in self.pipes.items():
-            errors += pipe.check_transform(data, raise_)
-            data = pipe.transform_schema(data)
+            try:
+                errors += pipe.check_transform(data, raise_)
+            except _exceptions.SchemaFlowError as e:
+                e.locations.append('of pipe \'%s\' of %s' % (key, self.__class__.__name__))
+                raise e
+
+            data = pipe._transform_schema(data)
         return errors
 
     def check_fit(self, data: dict, parameters: dict=None, raise_: bool=False):
@@ -142,7 +147,14 @@ class Pipeline(schemaflow.pipe.Pipe):
             except _exceptions.SchemaFlowError as e:
                 e.locations.append('of pipe \'%s\' of %s' % (key, self.__class__.__name__))
                 raise e
-            data = pipe.transform_schema(data)
+
+            try:
+                errors += pipe.check_transform(data, raise_)
+            except _exceptions.SchemaFlowError as e:
+                e.locations.append('of pipe \'%s\' of %s' % (key, self.__class__.__name__))
+                raise e
+
+            data = pipe._transform_schema(data)
         return errors
 
     def transform(self, data: dict):

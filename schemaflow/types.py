@@ -4,6 +4,15 @@ import importlib.util
 import schemaflow.exceptions as _exceptions
 
 
+def _requirement_fulfilled(requirement: str):
+    """
+    Returns whether a requirement is fulfilled.
+
+    :return: bool
+    """
+    return importlib.util.find_spec(requirement) is not None
+
+
 def _all_subclasses(cls):
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in _all_subclasses(c)])
@@ -58,10 +67,7 @@ class Type:
 
         :return: bool
         """
-        for requirement in cls.requirements:
-            if importlib.util.find_spec(requirement) is None:
-                return False
-        return True
+        return all(_requirement_fulfilled(requirement) for requirement in cls.requirements)
 
     def _check_as_instance(self, instance: object, raise_: bool):
         raise NotImplementedError
@@ -114,15 +120,6 @@ class _LiteralType(Type):
                 raise exception
             return [exception]
         return []
-
-    def _check_as_type(self, instance, raise_: bool):
-        exceptions = super()._check_as_type(instance, raise_)
-        if not exceptions and instance._base_type != self._base_type:
-            exception = _exceptions.WrongType(instance, self)
-            if raise_:
-                raise exception
-            exceptions.append(exception)
-        return exceptions
 
 
 class _DataFrame(Type):
